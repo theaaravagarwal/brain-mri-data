@@ -1,5 +1,6 @@
 # Python environments and generated package metadata
 .venv/
+.venv-train/
 venv/
 *.egg-info/
 __pycache__/
@@ -32,6 +33,7 @@ wandb/
 *.pth
 *.ckpt
 *.onnx
+.wheelhouse/
 
 # Credentials and local configuration
 .env

@@ -25,6 +25,9 @@ the data-import environment. Training targets the AMD RX 7900 XT exclusively;
 the ROCm-enabled PyTorch stack will be installed separately on that Linux
 training computer. CUDA is not part of this project.
 
+See [the AMD ROCm setup guide](docs/amd-rocm-setup.md) for the exact host and
+Python-environment procedure.
+
 Kaggle access requires `~/.kaggle/kaggle.json` or `KAGGLE_*` credentials.
 Hugging Face access requires `huggingface-cli login` for gated repos.
 
