@@ -1,6 +1,6 @@
 # AMD RX 7900 XT training environment
 
-This setup targets **WSL2** with x86-64 Ubuntu 24.04, AMD Radeon RX 7900 XT,
+This setup targets **WSL2** with x86-64 Ubuntu 24.04, AMD Radeon RX 7900 XT/XTX,
 ROCm 7.2, Python 3.12, and AMD's production-supported PyTorch 2.9.1
 wheel. It does not install CUDA or any NVIDIA packages.
 
@@ -52,14 +52,34 @@ drivers inside it.
 
 ## 3. Install the WSL-specific ROCm user space
 
+If `rocminfo` prints `WSL environment detected` followed by `hsa_init Failed`,
+check the installed runtime:
+
+```bash
+dpkg-query -W hsa-runtime-rocr4wsl-amdgpu hsa-rocr 2>&1
+```
+
+The WSL stack requires `hsa-runtime-rocr4wsl-amdgpu`. If only `hsa-rocr` is
+installed, the native-Linux ROCm repositories were used accidentally. Remove
+that ROCm installation before installing the WSL stack:
+
+```bash
+sudo amdgpu-uninstall
+sudo apt purge -y amdgpu-install
+sudo apt autoremove -y
+```
+
+These commands remove AMD/ROCm packages from the Ubuntu distribution; they do
+not remove the Windows Radeon driver or personal files.
+
 Run inside the Ubuntu WSL distribution:
 
 ```bash
 sudo apt update
 sudo apt install -y python3-setuptools python3-wheel
 wget https://repo.radeon.com/amdgpu-install/7.2/ubuntu/noble/amdgpu-install_7.2.70200-1_all.deb
-sudo apt install ./amdgpu-install_7.2.70200-1_all.deb
-amdgpu-install -y --usecase=wsl,rocm --no-dkms
+sudo apt install -y ./amdgpu-install_7.2.70200-1_all.deb
+sudo amdgpu-install -y --usecase=wsl,rocm --no-dkms
 ```
 
 Do not install DKMS or the native Linux graphics driver inside WSL. Close WSL
@@ -69,7 +89,12 @@ from PowerShell with `wsl --shutdown`, reopen Ubuntu, then verify:
 rocminfo | grep -E 'Name:|Marketing Name:'
 ```
 
-The RX 7900 XT should appear as architecture `gfx1100`. Stop if it does not.
+The RX 7900 XT/XTX should appear as architecture `gfx1100`. Stop if it does not.
+Also confirm the WSL runtime is installed:
+
+```bash
+dpkg-query -W hsa-runtime-rocr4wsl-amdgpu
+```
 
 ## 4. Install uv
 

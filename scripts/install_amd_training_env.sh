@@ -34,8 +34,16 @@ for command_name in uv rocminfo; do
   fi
 done
 
+if ! dpkg-query -W -f='${Status}' hsa-runtime-rocr4wsl-amdgpu 2>/dev/null \
+  | grep -q '^install ok installed$'; then
+  echo "Missing AMD's WSL-specific HSA runtime: hsa-runtime-rocr4wsl-amdgpu." >&2
+  echo "A native-Linux ROCm install will detect WSL but fail hsa_init." >&2
+  echo "Repair the ROCm host packages using docs/amd-rocm-setup.md before continuing." >&2
+  exit 1
+fi
+
 if ! rocminfo 2>/dev/null | grep -q "gfx1100"; then
-  echo "ROCm does not expose the RX 7900 XT (expected gfx1100)." >&2
+  echo "ROCm does not expose the RX 7900 XT/XTX (expected gfx1100)." >&2
   exit 1
 fi
 
