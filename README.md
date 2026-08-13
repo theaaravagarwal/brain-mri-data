@@ -22,8 +22,8 @@ uv sync --extra qc
 
 This project intentionally does not install PyTorch, ROCm, or MONAI as part of
 the data-import environment. Training targets the AMD RX 7900 XT exclusively;
-the ROCm-enabled PyTorch stack will be installed separately on that Linux
-training computer. CUDA is not part of this project.
+the ROCm-enabled PyTorch stack will be installed separately inside WSL2 after
+the Windows AMD WSL driver exposes the GPU. CUDA is not part of this project.
 
 See [the AMD ROCm setup guide](docs/amd-rocm-setup.md) for the exact host and
 Python-environment procedure.

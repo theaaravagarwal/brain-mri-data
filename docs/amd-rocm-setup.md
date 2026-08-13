@@ -1,8 +1,8 @@
 # AMD RX 7900 XT training environment
 
-This setup targets x86-64 **Ubuntu 24.04.4**, AMD Radeon RX 7900 XT, ROCm
-7.2.1, Python 3.12, and AMD's production-supported PyTorch 2.9.1 wheel. It does
-not install CUDA or any NVIDIA packages.
+This setup targets **WSL2** with x86-64 Ubuntu 24.04, AMD Radeon RX 7900 XT,
+ROCm 7.2, Python 3.12, and AMD's production-supported PyTorch 2.9.1
+wheel. It does not install CUDA or any NVIDIA packages.
 
 The version pins reflect AMD's supported Radeon matrix as of 2026-08-12. Check
 AMD's current Radeon compatibility matrix before reproducing the environment at
@@ -15,44 +15,78 @@ git clone https://github.com/theaaravagarwal/brain-mri-data.git
 cd brain-mri-data
 ```
 
-## 2. Install the AMD driver and ROCm on the host
+## 2. Make Windows expose the GPU to WSL2
 
-Run these commands on the Ubuntu training computer, not on a development Mac:
+The Windows host must use AMD's matching **Adrenalin Edition 26.1.1 for WSL2**
+driver for the ROCm 7.2 stack. Install that Windows driver and reboot Windows.
+
+Then run in an elevated PowerShell terminal:
+
+```powershell
+wsl --update
+wsl --shutdown
+```
+
+Restart the Ubuntu distribution. Confirm WSL exposes the GPU interface:
+
+```bash
+grep -i microsoft /proc/sys/kernel/osrelease
+ls -l /dev/dxg
+```
+
+If `/dev/dxg` is missing, stop. ROCm packages inside Ubuntu cannot create GPU
+passthrough; the Windows driver/WSL layer is not ready.
+
+Useful diagnostics from elevated PowerShell:
+
+```powershell
+wsl --version
+wsl --list --verbose
+Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion
+```
+
+The Ubuntu distribution must show WSL version `2`. If Windows sees the Radeon
+but `/dev/dxg` remains absent after installing the matching AMD WSL driver,
+reinstall/update the WSL distribution rather than installing native Linux DKMS
+drivers inside it.
+
+## 3. Install the WSL-specific ROCm user space
+
+Run inside the Ubuntu WSL distribution:
 
 ```bash
 sudo apt update
 sudo apt install -y python3-setuptools python3-wheel
-wget https://repo.radeon.com/amdgpu-install/7.2.1/ubuntu/noble/amdgpu-install_7.2.1.70201-1_all.deb
-sudo apt install ./amdgpu-install_7.2.1.70201-1_all.deb
-amdgpu-install -y --usecase=graphics,rocm
-sudo usermod -a -G render,video "$LOGNAME"
-sudo reboot
+wget https://repo.radeon.com/amdgpu-install/7.2/ubuntu/noble/amdgpu-install_7.2.70200-1_all.deb
+sudo apt install ./amdgpu-install_7.2.70200-1_all.deb
+amdgpu-install -y --usecase=wsl,rocm --no-dkms
 ```
 
-After reconnecting:
+Do not install DKMS or the native Linux graphics driver inside WSL. Close WSL
+from PowerShell with `wsl --shutdown`, reopen Ubuntu, then verify:
 
 ```bash
-groups
 rocminfo | grep -E 'Name:|Marketing Name:'
 ```
 
 The RX 7900 XT should appear as architecture `gfx1100`. Stop if it does not.
 
-## 3. Install uv
+## 4. Install uv
 
 If `uv` is not already installed, use the installation method published at
 https://docs.astral.sh/uv/getting-started/installation/ and then open a new
 shell.
 
-## 4. Create the isolated training environment
+## 5. Create the isolated training environment
 
 ```bash
 ./scripts/install_amd_training_env.sh
 ```
 
 This creates `.venv-train`, installs the project/QC dependencies, installs only
-AMD's ROCm PyTorch and Triton wheels, installs MONAI, and runs an actual matrix
-multiplication on the GPU.
+AMD's WSL-compatible ROCm 7.2 PyTorch and Triton wheels, removes the Linux
+wheel's bundled HSA runtime as AMD requires for WSL, installs MONAI, and runs an
+actual matrix multiplication on the GPU.
 
 Use the environment explicitly:
 
