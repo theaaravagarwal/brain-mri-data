@@ -1,0 +1,47 @@
+# Python environments and generated package metadata
+.venv/
+venv/
+*.egg-info/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Dataset material and generated manifests: never commit medical images
+data/**
+!data/.gitkeep
+*.nii
+*.nii.gz
+*.dcm
+*.dicom
+*.nrrd
+*.mha
+*.mhd
+*.h5
+*.hdf5
+*.mat
+*.parquet
+
+# Model and experiment artifacts
+checkpoints/
+runs/
+outputs/
+wandb/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+kaggle.json
+*.pem
+*.key
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/

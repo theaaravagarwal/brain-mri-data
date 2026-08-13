@@ -1,0 +1,275 @@
+schema_version: 1
+protocols:
+  glioma_4seq_v1:
+    required_modalities: [t1, t1ce, t2, flair]
+    requires_segmentation: true
+    box_source: whole_tumor_mask
+    allowed_task: glioma_3d_segmentation_detection
+  meningioma_4seq_v1:
+    required_modalities: [t1, t1ce, t2, flair]
+    requires_segmentation: true
+    box_source: whole_tumor_mask
+    allowed_task: meningioma_3d_segmentation_detection
+  pediatric_glioma_4seq_v1:
+    required_modalities: [t1, t1ce, t2, flair]
+    requires_segmentation: true
+    box_source: whole_tumor_mask
+    allowed_task: pediatric_glioma_3d_segmentation_detection
+  metastasis_4seq_v1:
+    required_modalities: [t1, t1ce, t2, flair]
+    requires_segmentation: true
+    box_source: connected_components_of_whole_lesion_mask
+    allowed_task: metastasis_3d_segmentation_detection
+modules:
+  adult_glioma:
+    protocol: glioma_4seq_v1
+    canonical_targets: [whole_lesion, tumor_core, enhancing_tumor]
+    population: adult
+  meningioma:
+    protocol: meningioma_4seq_v1
+    canonical_targets: [whole_lesion, enhancing_tumor, nonenhancing_tumor, edema]
+    population: adult
+  pediatric_glioma:
+    protocol: pediatric_glioma_4seq_v1
+    canonical_targets: [whole_lesion, enhancing_tumor, nonenhancing_tumor, cystic_component, edema]
+    population: pediatric
+  metastasis:
+    protocol: metastasis_4seq_v1
+    canonical_targets: [whole_lesion, lesion_instances]
+    population: mixed
+profiles:
+  brats2020_primary:
+    sources: [brats2020_kaggle]
+    max_estimated_gb: 12
+    purpose: primary_training_and_internal_validation
+  external_holdout_candidates:
+    sources: [brats2024_gli_hf]
+    max_estimated_gb: 65
+    purpose: choose_one_source_only_after_provenance_and_license_review
+  under_100gb_recommended:
+    sources: [brats2020_kaggle, brats2023_men_hf]
+    max_estimated_gb: 24
+    purpose: separate glioma_and_meningioma_modules; never mix their label ontologies
+  glioma_diverse_under_100gb:
+    sources: [brats2020_kaggle, utsw_glioma_tcia, brats_africa_tcia]
+    max_estimated_gb: 40
+    purpose: strong multi-site glioma training pool; audit overlap and harmonize labels before merging
+  glioma_research_1tb:
+    sources: [brats2020_kaggle, utsw_glioma_tcia, ucsf_pdgm_tcia, upenn_gbm_tcia, brats_africa_tcia, remind_tcia]
+    max_estimated_gb: 294.5
+    purpose: raw volumetric corpus; reserve UPENN-GBM or UCSF-PDGM as untouched external evaluation until the final experiment design is locked
+  glioma_train_plus_locked_external_1tb:
+    sources: [brats2020_kaggle, utsw_glioma_tcia, ucsf_pdgm_tcia, brats_africa_tcia, upenn_gbm_tcia]
+    max_estimated_gb: 250.9
+    purpose: train on the first four sources and lock UPENN-GBM for external evaluation; remaining space supports caches, processed patches, checkpoints, and exports
+sources:
+  brats2020_kaggle:
+    provider: kaggle
+    locator: awsaf49/brats20-dataset-training-validation
+    version: 2020
+    format: nifti_3d
+    tumor_scope: glioma
+    modalities: [t1, t1ce, t2, flair]
+    has_segmentation: true
+    estimated_gb: 6
+    license: verify_at_download
+    status: primary_candidate
+    protocol: glioma_4seq_v1
+    module: adult_glioma
+    label_ontology: brats_adult_legacy_1_2_4
+    potential_cohort_overlap_groups: [brats_adult_glioma_ecosystem, upenn, ucsf]
+    notes: >-
+      Multi-institutional BraTS 2020 mirror. Training cases have masks; validation
+      cases may not. Indexer excludes unmasked cases for this protocol.
+  brats2020_deepmedic_kaggle:
+    provider: kaggle
+    locator: darksteeldragon/brats2020-nifti-format-for-deepmedic
+    version: 2020
+    format: nifti_3d
+    tumor_scope: glioma
+    modalities: [t1, t1ce, t2, flair]
+    has_segmentation: true
+    estimated_gb: 4.48
+    license: CC0_claimed_by_mirror_verify
+    status: duplicate_candidate
+    protocol: glioma_4seq_v1
+    module: adult_glioma
+    label_ontology: brats_adult_legacy_1_2_4
+    potential_cohort_overlap_groups: [brats_adult_glioma_ecosystem, upenn, ucsf]
+    notes: Potential repackaging/overlap with BraTS 2020; never merge before hash and ID audit.
+  brats2024_gli_hf:
+    provider: huggingface
+    locator: Aff77/BraTS-2024-Complete
+    include_patterns: [BraTS-GLI/**]
+    revision: main
+    format: nifti_3d
+    tumor_scope: glioma
+    modalities: [t1, t1ce, t2, flair]
+    has_segmentation: true
+    estimated_gb: 50
+    license: CC-BY-NC-SA-4.0_claimed_by_mirror_verify
+    status: external_candidate
+    protocol: glioma_4seq_v1
+    module: adult_glioma
+    label_ontology: brats_adult_current_source_specific
+    potential_cohort_overlap_groups: [brats_adult_glioma_ecosystem, upenn, ucsf]
+    notes: Download only the GLI subtree; inspect source provenance and terms before use.
+  brats2020_yolo_kaggle:
+    provider: kaggle
+    locator: ammarahmed310/labeled-mri-brain-tumor-dataset
+    format: image_2d_yolo
+    tumor_scope: mixed_2d
+    modalities: []
+    has_segmentation: false
+    estimated_gb: 2
+    license: CC0_claimed_by_mirror_verify
+    status: auxiliary_2d_only
+    notes: Do not use for the 3D four-sequence protocol or as independent validation.
+  brats2023_men_hf:
+    provider: huggingface
+    locator: MedOtter/brats2023-men-dataset
+    revision: main
+    format: nifti_3d
+    tumor_scope: meningioma
+    modalities: [t1, t1ce, t2, flair]
+    has_segmentation: true
+    estimated_gb: 12
+    license: CC-BY-4.0_claimed_by_mirror_verify
+    status: meningioma_module_candidate
+    protocol: meningioma_4seq_v1
+    module: meningioma
+    label_ontology: brats_meningioma_2023
+    potential_cohort_overlap_groups: [brats_meningioma_ecosystem]
+    notes: Keep this as a separate meningioma model/data module; review original BraTS terms and label schema.
+  pituitary_2d_kaggle:
+    provider: kaggle
+    locator: rm1000/brain-tumor-mri-scans
+    format: image_2d_classification
+    tumor_scope: pituitary
+    modalities: []
+    has_segmentation: false
+    estimated_gb: 1
+    license: CC0_claimed_by_mirror_verify
+    status: catalog_only_no_3d_protocol_eligibility
+    notes: A 2D classification source, retained only to document the pituitary data gap. Do not train the 3D protocol from it.
+  utsw_glioma_tcia:
+    provider: manual_tcia
+    locator: https://www.cancerimagingarchive.net/collection/utsw-glioma/
+    format: nifti_3d
+    tumor_scope: glioma
+    modalities: [t1, t1ce, t2, flair]
+    has_segmentation: true
+    estimated_gb: 22.9
+    license: CC-BY-4.0
+    status: high_priority_primary_candidate
+    protocol: glioma_4seq_v1
+    module: adult_glioma
+    label_ontology: utsw_multilabel_glioma
+    potential_cohort_overlap_groups: [utsw]
+    notes: 625 cases; multi-label tumor masks and molecular data. Download via TCIA/Aspera, then place raw files under data/raw/utsw_glioma_tcia.
+  ucsf_pdgm_tcia:
+    provider: manual_tcia
+    locator: https://www.cancerimagingarchive.net/collection/ucsf-pdgm/
+    format: nifti_3d
+    tumor_scope: diffuse_glioma
+    modalities: [t1, t1ce, t2, flair]
+    has_segmentation: true
+    estimated_gb: 142
+    license: CC-BY-4.0_check_current_terms
+    status: high_priority_selective_download
+    protocol: glioma_4seq_v1
+    module: adult_glioma
+    label_ontology: ucsf_pdgm_multilabel
+    potential_cohort_overlap_groups: [ucsf]
+    notes: ~500 subjects. Over 100-GB cap in full; acquire a documented patient subset or use as a future external evaluation source.
+  upenn_gbm_tcia:
+    provider: manual_tcia
+    locator: https://www.cancerimagingarchive.net/collection/upenn-gbm/
+    format: nifti_3d
+    tumor_scope: glioblastoma
+    modalities: [t1, t1ce, t2, flair]
+    has_segmentation: true
+    estimated_gb: 69
+    license: TCIA_data_usage_policy_check_current_terms
+    status: high_priority_external_candidate
+    protocol: glioma_4seq_v1
+    module: adult_glioma
+    label_ontology: upenn_gbm_multilabel
+    potential_cohort_overlap_groups: [upenn]
+    notes: 630 cases. Use co-registered NIfTI plus manually corrected tumor labels, not the 139-GB DICOM download.
+  brats_africa_tcia:
+    provider: manual_tcia
+    locator: https://www.cancerimagingarchive.net/collection/brats-africa/
+    format: nifti_3d
+    tumor_scope: glioma
+    modalities: [t1, t1ce, t2, flair]
+    has_segmentation: true
+    estimated_gb: 10
+    license: TCIA_data_usage_policy_check_current_terms
+    status: high_priority_external_candidate
+    protocol: glioma_4seq_v1
+    module: adult_glioma
+    label_ontology: brats_africa_source_specific
+    potential_cohort_overlap_groups: [brats_africa]
+    notes: 146 cases from six Nigerian centers; a high-value domain-shift evaluation source.
+  remind_tcia:
+    provider: manual_tcia
+    locator: https://www.cancerimagingarchive.net/collection/remind/
+    format: nifti_or_dicom_3d
+    tumor_scope: brain_cancer_mixed
+    modalities: [t1, t1ce, t2, flair]
+    has_segmentation: true
+    estimated_gb: 43.6
+    license: TCIA_data_usage_policy_check_current_terms
+    status: verify_label_ontology_before_use
+    protocol: glioma_4seq_v1
+    module: adult_glioma
+    label_ontology: unreviewed_remind
+    potential_cohort_overlap_groups: [remind]
+    notes: 114 cases with preoperative four-sequence MRI and segmentations; confirm diagnosis/mask definitions before including.
+  dfci_peds_hgg_tcia:
+    provider: manual_tcia
+    locator: https://www.cancerimagingarchive.net/collection/dfci-bch-bwh-peds-hgg/
+    format: nifti_or_dicom_3d
+    tumor_scope: pediatric_high_grade_glioma
+    modalities: [t1, t1ce, t2, flair]
+    has_segmentation: true
+    estimated_gb: unknown
+    license: TCIA_data_usage_policy_check_current_terms
+    status: pediatric_module_candidate
+    protocol: pediatric_glioma_4seq_v1
+    module: pediatric_glioma
+    label_ontology: source_specific_review_required
+    potential_cohort_overlap_groups: [dfci_bch_bwh_peds]
+    notes: Keep separate from adult training/evaluation unless an explicitly mixed-age protocol is approved.
+  pretreat_metstobrain_tcia:
+    provider: manual_tcia
+    locator: https://www.cancerimagingarchive.net/collection/pretreat-metstobrain-masks/
+    format: nifti_or_dicom_3d
+    tumor_scope: brain_metastases
+    modalities: [t1, t1ce, t2, flair]
+    has_segmentation: true
+    estimated_gb: unknown
+    license: TCIA_data_usage_policy_check_current_terms
+    status: metastasis_module_candidate_verify_case_completeness
+    protocol: metastasis_4seq_v1
+    module: metastasis
+    label_ontology: source_specific_enhancing_necrotic_edema_review_required
+    potential_cohort_overlap_groups: [pretreat_metstobrain]
+    notes: Candidate only. Require per-case four-sequence completeness and review instance-mask semantics before eligibility.
+  ucsf_pdgm_hf_subset:
+    provider: huggingface
+    locator: determined-ai/3d-brain-mri
+    revision: main
+    format: nifti_3d
+    tumor_scope: diffuse_glioma
+    modalities: [t1, t1ce, t2, flair]
+    has_segmentation: true
+    estimated_gb: unknown
+    license: CC-BY-4.0
+    status: development_subset_only
+    protocol: glioma_4seq_v1
+    module: adult_glioma
+    label_ontology: ucsf_pdgm_derived_binary
+    potential_cohort_overlap_groups: [ucsf]
+    notes: 87-case skull-stripped UCSF-PDGM-derived subset; use for pipeline development, not independent testing against UCSF-PDGM.

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "brain-mri-data"
+version = "0.1.0"
+description = "Provenance-first four-sequence brain MRI dataset aggregator"
+requires-python = ">=3.11,<3.14"
+dependencies = ["PyYAML>=6.0", "huggingface_hub>=0.25", "kagglehub>=0.3"]
+
+[project.optional-dependencies]
+qc = ["nibabel>=5.2", "numpy>=1.26"]
+train = ["torch>=2.4", "monai>=1.4"]
+
+[project.scripts]
+brain-mri-data = "brain_mri_data.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
