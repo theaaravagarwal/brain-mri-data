@@ -1,7 +1,7 @@
 # Brain MRI dataset aggregator
 
 This project creates provenance-preserving manifests for four-sequence brain MRI
-tumour datasets. It is designed for a **glioma-first 3D protocol**: every
+tumour datasets. It is designed for a **multi-module 3D protocol**: every
 evaluated case requires T1, T1ce/T1c, T2, and FLAIR/T2f, plus a voxel mask.
 3D bounding boxes are derived from the mask; they are never treated as a
 separate, weaker ground truth.
@@ -19,6 +19,11 @@ packages may lag behind Python 3.14):
 uv python install 3.12
 uv sync --extra qc
 ```
+
+This project intentionally does not install PyTorch, ROCm, or MONAI as part of
+the data-import environment. Training targets the AMD RX 7900 XT exclusively;
+the ROCm-enabled PyTorch stack will be installed separately on that Linux
+training computer. CUDA is not part of this project.
 
 Kaggle access requires `~/.kaggle/kaggle.json` or `KAGGLE_*` credentials.
 Hugging Face access requires `huggingface-cli login` for gated repos.
@@ -76,11 +81,11 @@ provenance review for publication.
 
 ## Model direction
 
-Use one strong 3D multi-task glioma model first: a MONAI `SegResNet` or
-`SwinUNETR` segmentation network with a small presence/3D-box head. The box is
-computed from the predicted whole-tumour mask during inference and compared to
-the derived mask box during evaluation. This is more reliable than fitting a
-separate box head alone.
+Use task-specific 3D models for adult glioma, meningioma, pediatric glioma, and
+metastases. Start each module with a MONAI `SegResNet` baseline and compare
+shared-encoder or multi-task extensions only after the independent baselines
+are sound. Boxes are computed from predicted whole-lesion masks; metastases can
+produce multiple connected-component boxes.
 
 An LLM should only turn validated, structured model outputs into a clearly
 labelled research explanation. It must not select the diagnostic model, inspect

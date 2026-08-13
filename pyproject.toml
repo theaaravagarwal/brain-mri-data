@@ -11,7 +11,6 @@ dependencies = ["PyYAML>=6.0", "huggingface_hub>=0.25", "kagglehub>=0.3"]
 
 [project.optional-dependencies]
 qc = ["nibabel>=5.2", "numpy>=1.26"]
-train = ["torch>=2.4", "monai>=1.4"]
 
 [project.scripts]
 brain-mri-data = "brain_mri_data.cli:main"

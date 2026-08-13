@@ -1,4 +1,4 @@
-# Architecture decision: `glioma_4seq_v1`
+# Architecture decision: multi-tumor MRI on AMD ROCm
 
 ## First prototype
 
@@ -17,11 +17,10 @@ with the mask-derived box loss.
 | Hardware | Baseline settings |
 | --- | --- |
 | AMD RX 7900 XT (20 GB) | PyTorch ROCm build, 96^3 patch, batch 1, AMP, gradient accumulation 4 |
-| One RTX A4000 (16 GB) | 96^3 patch, batch 1, AMP, gradient accumulation 4 |
-| Four RTX A4000s | DDP, per-GPU batch 1--2, 96^3 or 128^3 after profiling |
 
-Validate the exact ROCm/PyTorch/MONAI versions on the AMD machine before
-committing to it; CUDA multi-GPU has the lower-friction training path.
+Validate the exact accelerator/PyTorch/MONAI combination on the training
+machine before installing it. The dataset aggregator deliberately installs no
+ROCm, PyTorch, or MONAI packages, and the project has no CUDA path.
 
 ## Novel-but-defensible extension
 
@@ -32,8 +31,8 @@ architecture novelty alone is not enough.
 
 ## Modular future scope
 
-Meningioma and pituitary models may later be added as separate, protocol-bound
-modules, each with its own four-sequence data, label ontology, calibration, and
-test set. A deterministic input protocol router may select a module. An LLM is
-restricted to explaining structured outputs and uncertainty flags; it is not a
-medical decision-maker or model router.
+Adult glioma, meningioma, pediatric glioma, and metastasis models are separate,
+protocol-bound modules, each with its own four-sequence data, label ontology,
+calibration, and test set. A deterministic input protocol router may select a
+module. An LLM is restricted to explaining structured outputs and uncertainty
+flags; it is not a medical decision-maker or model router.
