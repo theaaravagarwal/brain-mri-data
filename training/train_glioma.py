@@ -36,6 +36,9 @@ else:
     from pamc import PamcSegResNet, mask_one_modality, modality_consistency_loss
 
 
+MODALITY_ORDER = ("t1", "t1ce", "t2", "flair")
+
+
 class WholeLesiond(MapTransform):
     def __call__(self, data: dict[str, Any]) -> dict[str, Any]:
         result = dict(data)
@@ -92,7 +95,10 @@ def manifest_items(study: dict[str, Any], raw_root: Path, arm: str, split: str) 
         record = item["record"]
         positive = mappings[source_id]["whole_lesion"]["positive_values"]
         output.append({
-            "image": [str(resolve_case_path(record, path, raw_root)) for path in record["modalities"].values()],
+            "image": [
+                str(resolve_case_path(record, record["modalities"][modality], raw_root))
+                for modality in MODALITY_ORDER
+            ],
             "label": str(resolve_case_path(record, record["segmentation"], raw_root)),
             "positive_values": positive,
             "source_index": source_index.get(source_id, -1),

@@ -5,6 +5,8 @@ from typing import Any
 
 from .indexer import read_jsonl, resolve_case_path
 
+MODALITY_ORDER = ("t1", "t1ce", "t2", "flair")
+
 
 def _box(mask: Any, affine: Any) -> dict[str, list[float] | list[int]] | None:
     import numpy as np
@@ -46,7 +48,10 @@ def validate_cases(cases_path: Path, raw_root: Path, source: dict[str, Any] | No
     results = []
     for case in read_jsonl(cases_path):
         try:
-            image_paths = [resolve_case_path(case, path, raw_root) for path in case["modalities"].values()]
+            image_paths = [
+                resolve_case_path(case, case["modalities"][modality], raw_root)
+                for modality in MODALITY_ORDER
+            ]
             segmentation_path = resolve_case_path(case, case["segmentation"], raw_root)
             images = [nib.load(path) for path in image_paths]
             seg = nib.load(segmentation_path)

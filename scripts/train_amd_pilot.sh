@@ -10,6 +10,13 @@ if [[ ! -x .venv/bin/brain-mri-data || ! -x .venv/bin/python ]]; then
   exit 1
 fi
 
+for manifest in data/manifests/brats2020_kaggle.cases.jsonl data/manifests/brats2020_kaggle.qc.jsonl; do
+  if [[ ! -s "$manifest" ]]; then
+    echo "Missing $manifest. Run: brain-mri-data index brats2020_kaggle && brain-mri-data validate brats2020_kaggle" >&2
+    exit 1
+  fi
+done
+
 if [[ ! -f "$STUDY" ]]; then
   .venv/bin/brain-mri-data build-study config/studies/glioma-pilot.yaml --output "${STUDY#data/manifests/}"
 fi
