@@ -76,6 +76,11 @@ does not include an LLM or public-facing clinical application. Confirm the
 documentation route with the affiliated-fair SRC before data work; local fairs
 can impose additional requirements.
 
+Use [the ISEF compliance checklist](isef-compliance-checklist.md) to record
+provider de-identification evidence and seek the Adult Sponsor/SRC
+determination before experimentation. It is deliberately not a substitute for
+the student-authored Research Plan/Project Summary or competition forms.
+
 # First execution: internal pilot
 
 Use the BraTS 2020-only pilot only to verify the full training pipeline and
