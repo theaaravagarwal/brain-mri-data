@@ -13,7 +13,7 @@ from .splits import make_split
 from .study import build_study_manifest
 from .run_matrix import claim_run, expand_matrix
 from .language_bench import score_evidence, score_structured
-from .language_gateway import build_explainer_prompt, load_language_policy, validate_result_envelope
+from .language_gateway import build_explainer_prompt, load_language_policy, validate_job_proposal, validate_result_envelope
 
 
 def paths(args: argparse.Namespace) -> tuple[Path, Path]:
@@ -62,6 +62,9 @@ def main() -> None:
     language_score.add_argument("kind", choices=("structured", "evidence"))
     language_score.add_argument("fixtures")
     language_score.add_argument("responses")
+    language_propose = language_sub.add_parser("propose-job")
+    language_propose.add_argument("proposal", help="JSON proposal with run_id, profile, and reason")
+    language_propose.add_argument("matrix", help="pre-approved run matrix YAML")
     args = parser.parse_args()
     catalog = load_catalog()
     raw_root, manifest_root = paths(args)
@@ -102,6 +105,9 @@ def main() -> None:
             print(json.dumps(validate_result_envelope(payload), indent=2, sort_keys=True)); return
         if args.language_command == "prompt":
             print(build_explainer_prompt(payload)); return
+        if args.language_command == "propose-job":
+            proposal = json.loads(Path(args.proposal).read_text())
+            print(json.dumps(validate_job_proposal(proposal, expand_matrix(Path(args.matrix))), indent=2, sort_keys=True)); return
         scorer = score_structured if args.kind == "structured" else score_evidence
         print(json.dumps(scorer(Path(args.fixtures), Path(args.responses)), indent=2, sort_keys=True)); return
     source = get_source(args.source_id, catalog)

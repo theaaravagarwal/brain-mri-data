@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from brain_mri_data.language_bench import score_evidence, score_structured
-from brain_mri_data.language_gateway import build_explainer_prompt, validate_explanation, validate_result_envelope
+from brain_mri_data.language_gateway import build_explainer_prompt, validate_explanation, validate_job_proposal, validate_result_envelope
 
 
 def record(status: str = "complete") -> dict:
@@ -48,3 +48,10 @@ class LanguageGatewayTests(unittest.TestCase):
             evidence = root / "evidence.jsonl"; evidence.write_text(json.dumps({"id": "e", "required_terms": ["not"], "allowed_source_ids": ["policy"]}) + "\n")
             evidence_response = root / "evidence-responses.jsonl"; evidence_response.write_text(json.dumps({"id": "e", "response": {"answer": "Not permitted.", "citations": ["policy"]}}) + "\n")
             self.assertEqual(score_evidence(evidence, evidence_response)["passed"], 1)
+
+    def test_planner_can_only_propose_matrix_job(self) -> None:
+        jobs = [{"run_id": "glioma--cuda--brats--20260812", "profile": "cuda"}]
+        accepted = {"run_id": "glioma--cuda--brats--20260812", "profile": "cuda", "reason": "pre-approved baseline"}
+        self.assertEqual(validate_job_proposal(accepted, jobs), accepted)
+        with self.assertRaisesRegex(ValueError, "pre-approved"):
+            validate_job_proposal({**accepted, "run_id": "unapproved"}, jobs)
