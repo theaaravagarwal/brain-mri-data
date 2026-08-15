@@ -210,14 +210,14 @@ def evaluate(
             unit="case", dynamic_ncols=True, disable=not sys.stderr.isatty(), leave=False,
         )
         for case_number, batch in enumerate(iterator, start=1):
-            image = batch["image"].to(device)
+            image = batch["image"].to(device, non_blocking=True)
             case_ids = [str(case_id) for case_id in batch["case_id"]]
             masked_modalities: list[str | None] = [None] * len(case_ids)
             if corruption_seed is not None:
                 image, masked_modalities = deterministic_mask_one_modality(image, case_ids, corruption_seed)
             with torch.amp.autocast("cuda", dtype=torch.float16):
                 logits = sliding_window_inference(image, patch_size, 1, lambda values: model(values)[0], overlap=0.5)
-            labels = batch["label"].to(device)
+            labels = batch["label"].to(device, non_blocking=True)
             dice = dice_per_case(logits, labels)
             box_iou = box_iou_per_case(logits, labels)
             hd95 = hd95_mm_per_case(logits, labels)
@@ -350,7 +350,8 @@ def main() -> None:
             unit="batch", dynamic_ncols=True, disable=not sys.stderr.isatty(), leave=True,
         )
         for step, batch in enumerate(train_iterator, start=1):
-            image, label = batch["image"].to(device), batch["label"].to(device)
+            image = batch["image"].to(device, non_blocking=True)
+            label = batch["label"].to(device, non_blocking=True)
             with torch.amp.autocast("cuda", dtype=torch.float16):
                 logits, domain_logits = model(image, 1.0 if args.arm == "pamc" else 0.0)
                 loss = segmentation_loss(logits, label)

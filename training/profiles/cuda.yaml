@@ -5,9 +5,9 @@ expected_gpu_name_contains: RTX 3060
 mixed_precision: fp16
 batch_size: 1
 effective_batch_size: 4
-num_workers: 2
-prefetch_factor: 2
+num_workers: 8
+prefetch_factor: 4
 persistent_workers: true
 pin_memory: true
 patch_size: [80, 80, 80]
-notes: RTX 3060, 12 GB VRAM / 32 GB RAM
+notes: RTX 3060, 12 GB VRAM; 8 workers and 4 prefetched batches keep NIfTI decode off the GPU critical path
