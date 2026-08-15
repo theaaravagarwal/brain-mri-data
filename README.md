@@ -63,13 +63,15 @@ uv run brain-mri-data split brats2020_kaggle --seed 20260812
 uv run brain-mri-data export-monai brats2020_kaggle
 ```
 
-With the available 1-TB budget, start with `glioma_train_plus_locked_external_1tb`:
-BraTS 2020, UTSW-Glioma, UCSF-PDGM, and BraTS-Africa for training/development;
-keep UPENN-GBM locked as the final external test set. Its raw-data estimate is
-about 251 GB, leaving room for downloads, preprocessing caches, model
-checkpoints, and transfer packaging. Do not use an unverified mirror or a 2D
-slice dataset as an independent test set: catalog it as `auxiliary_2d` only,
-because it may overlap a primary BraTS release.
+With the available 1-TB budget, `glioma_train_plus_locked_external_1tb` is a
+useful acquisition-budget profile (about 251 GB raw), leaving room for
+downloads, preprocessing caches, checkpoints, and transfer packaging. It is
+not an experimental allocation. The ISEF study configuration is authoritative:
+train on BraTS 2020, UTSW-Glioma, and UCSF-PDGM; lock BraTS-Africa as the
+domain-shift external cohort; exclude UPENN-GBM until its potential BraTS
+lineage overlap has a documented review. Do not use an unverified mirror or a
+2D slice dataset as an independent test set: catalog it as `auxiliary_2d`
+only, because it may overlap a primary BraTS release.
 
 The catalog also includes `manual_tcia` sources. These are high-value datasets
 whose official portals sometimes require TCIA tools or Aspera; download them
@@ -89,7 +91,7 @@ Before any training split is accepted, audit the proposed source lineage:
 ```bash
 uv run brain-mri-data audit-experiment \
   --train brats2020_kaggle utsw_glioma_tcia \
-  --test upenn_gbm_tcia --strict
+  --test brats_africa_tcia --strict
 ```
 
 The audit blocks cross-module experiments, declared institution/challenge

@@ -61,7 +61,7 @@ profiles:
   glioma_train_plus_locked_external_1tb:
     sources: [brats2020_kaggle, utsw_glioma_tcia, ucsf_pdgm_tcia, brats_africa_tcia, upenn_gbm_tcia]
     max_estimated_gb: 250.9
-    purpose: train on the first four sources and lock UPENN-GBM for external evaluation; remaining space supports caches, processed patches, checkpoints, and exports
+    purpose: acquisition-budget profile only; the frozen study config, not this storage list, determines train and external cohorts
 sources:
   brats2020_kaggle:
     provider: kaggle
