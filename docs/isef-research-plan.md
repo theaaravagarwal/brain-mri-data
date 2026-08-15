@@ -87,6 +87,6 @@ must not be used for final model selection claims.
 ```
 
 The script creates `data/manifests/glioma.pilot.json` once and records output
-under `runs/glioma-pilot--cuda--brats--20260812`. The full study remains blocked
+under `runs/glioma-pilot--cuda--brats--20260813`. The full study remains blocked
 until its independent external cohort, label mapping, and manual provenance
 review are ready.
