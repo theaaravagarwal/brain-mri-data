@@ -33,9 +33,9 @@ uv sync --extra cuda
 ```
 
 Never enable both extras in one environment. They contain different PyTorch
-builds. The AMD worker is CPU-limited, so its profile deliberately uses one
-data-loader worker; the CUDA worker uses two. Both profiles retain the same
-80^3 scientific patch configuration and effective batch size.
+builds. The CUDA profile is the sole CNN-study runtime. The AMD environment is
+kept for ROCm validation and the separately bounded research-language worker;
+it must not run frozen CNN study arms.
 
 See [the AMD ROCm setup guide](docs/amd-rocm-setup.md) and
 [the NVIDIA CUDA setup guide](docs/cuda-setup.md) for host checks and
@@ -136,13 +136,10 @@ Use a controller-side `data/experiments/` directory for claims. Workers should
 claim jobs through Tailscale/SSH and synchronize only run artifacts, never raw
 MRI volumes.
 
-After the study has been locked, start a concise PAMC run with:
+After the study has been locked, claim and start a PAMC run with:
 
 ```bash
-.venv/bin/python training/train_glioma.py \
-  --study data/manifests/glioma.locked.json \
-  --profile training/profiles/cuda.yaml \
-  --arm pamc --seed 20260812 --output runs/glioma--cuda--pamc--20260812
+./scripts/run_glioma_job.sh pamc 20260812
 ```
 
 PAMC is the research contribution: it combines source-adversarial features
@@ -151,12 +148,10 @@ evaluated on a locked external cohort both with all four sequences and under
 the controlled masking condition; it is not a diagnosis system or an LLM.
 # Concurrent pilot runs
 
-Use different seeds on the two workers; do not duplicate the same pilot run.
+The completed AMD checks are engineering pilots only. Use CUDA for the active
+pilot curve; do not start a second AMD CNN pilot.
 
 ```bash
-# AMD worker: seed 20260812
-./scripts/train_amd_pilot.sh 1
-
 # CUDA worker: resumably copy only BraTS 2020, then run seed 20260813
 ./scripts/sync_cuda_pilot.sh
 ```

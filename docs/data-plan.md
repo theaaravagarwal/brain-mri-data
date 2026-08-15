@@ -56,11 +56,13 @@ in a study manifest before any model run.
 **Goal:** Establish a 3D SegResNet baseline, then test PAMC pooled training
 without changing preprocessing, compute budget, or locked test cases.
 
-### Task 3.1: Train dual-worker segmentation baselines
+### Task 3.1: Train CUDA segmentation baselines
 - **Location:** `training/`
 - **Complexity:** 8
-- **Acceptance:** CUDA and ROCm jobs use the same 80^3 study setting and
-  effective batch size; each records its runtime profile and hardware telemetry.
+- **Acceptance:** the nine frozen CUDA `(arm, seed)` jobs use the same 80^3
+  study setting and effective batch size; each records immutable runtime,
+  code, checkpoint, and case-level metric artifacts. The AMD worker is limited
+  to the separately evaluated research-language layer.
 
 ### Task 3.2: External validation
 - **Dependencies:** provenance review of a non-overlapping external source.
