@@ -149,3 +149,34 @@ the GPU to WSL through `/dev/dxg`. Use the project monitor instead:
 
 It combines Linux trainer CPU/RAM with Windows GPU adapter memory and compute
 engine counters. Press `Ctrl-C` to stop monitoring; it does not stop training.
+
+## Optional: Ollama research-language worker
+
+Ollama is optional and is only for the constrained research-language benchmarks
+in this project. It never receives images, paths, patient identifiers, or the
+power to route a model, diagnose, or recommend treatment.
+
+The RX 7900 XTX is an officially supported Ollama ROCm target, but a WSL2
+systemd service must not preload a versioned HSA runtime left behind by a ROCm
+package update. Such a preload can make GPU discovery crash and silently fall
+back to CPU. The helper below replaces only the Ollama drop-in, saves a
+timestamped backup, restarts the service, and prints the GPU-only acceptance
+check:
+
+```bash
+./scripts/repair_amd_ollama_wsl.sh
+ollama run qwen3:14b "Reply with exactly: OK"
+ollama ps
+```
+
+`ollama ps` must say `GPU` in the `PROCESSOR` column. If it says `CPU`, stop
+the model immediately (`ollama stop qwen3:14b`) rather than consuming the
+thermally constrained CPU, then capture the service log:
+
+```bash
+journalctl -u ollama -n 120 --no-pager
+```
+
+The helper intentionally uses an 8k context and five-minute keep-alive for the
+first verification. Increase either only after a GPU-backed benchmark has
+passed and its resource use is recorded.
