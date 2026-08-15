@@ -72,7 +72,10 @@ def validate_cases(cases_path: Path, raw_root: Path, source: dict[str, Any] | No
         affines_match = all(np.allclose(image.affine, seg.affine, rtol=1e-5, atol=1e-5) for image in images)
         if not affines_match:
             reasons.append("affine_mismatch")
-        spacing = list(seg.header.get_zooms()[:3])
+        # Nibabel exposes header zooms as NumPy scalar values.  Case reports
+        # are portable JSON artifacts, so convert them at this boundary rather
+        # than leaking NumPy dtypes into the CLI serializer.
+        spacing = [float(value) for value in seg.header.get_zooms()[:3]]
         if len(spacing) != 3 or not all(np.isfinite(spacing)) or not all(value > 0 for value in spacing):
             reasons.append("invalid_spacing")
         finite_mask = np.isfinite(mask)
