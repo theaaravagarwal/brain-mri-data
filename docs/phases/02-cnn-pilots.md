@@ -13,5 +13,5 @@ Status: in progress.
 Monitor an active CUDA curve without modifying it:
 
 ```bash
-./scripts/watch_cuda.py --run runs/glioma-pilot--cuda--brats--20260812--e10
+brain-mri-data monitor
 ```

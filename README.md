@@ -162,5 +162,9 @@ CNN fallback.
 For a live CUDA health/telemetry view, run:
 
 ```bash
-./scripts/watch_cuda.py --run runs/glioma-pilot--cuda--brats--20260812--e10
+brain-mri-data monitor
+
+# Noninteractive or script-friendly snapshots:
+brain-mri-data monitor --once
+brain-mri-data monitor --json --once
 ```
