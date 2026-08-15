@@ -136,3 +136,16 @@ PyTorch intentionally calls the ROCm device through APIs such as
 `torch.cuda.is_available()` and the device string `cuda:0`. Those historical
 API names are also used by ROCm builds; the verifier requires `torch.version.hip`
 and rejects a build with a CUDA runtime.
+
+## Monitoring a WSL training run
+
+WSL2 intentionally does not load the native Linux `amdgpu` kernel driver, so
+`rocm-smi` cannot report utilization there. Windows owns that driver and exposes
+the GPU to WSL through `/dev/dxg`. Use the project monitor instead:
+
+```bash
+./scripts/watch_amd.py
+```
+
+It combines Linux trainer CPU/RAM with Windows GPU adapter memory and compute
+engine counters. Press `Ctrl-C` to stop monitoring; it does not stop training.
