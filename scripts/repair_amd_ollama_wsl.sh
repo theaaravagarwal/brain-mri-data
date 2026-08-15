@@ -14,12 +14,12 @@ fi
 
 gpu_ready=false
 set +e
-rocminfo_output="$(rocminfo 2>&1)"
+rocminfo_output="$(env -u HSA_ENABLE_DXG_DETECTION rocminfo 2>&1)"
 rocminfo_status=$?
 set -e
 if grep -q 'gfx1100' <<<"$rocminfo_output"; then
   gpu_ready=true
-elif [[ -x .venv/bin/python ]] && .venv/bin/python - <<'PY'
+elif [[ -x .venv/bin/python ]] && env -u HSA_ENABLE_DXG_DETECTION .venv/bin/python - <<'PY'
 import torch
 assert torch.version.hip is not None
 assert torch.cuda.is_available()
@@ -50,9 +50,8 @@ trap 'rm -f "$tmp_path"' EXIT
 cat >"$tmp_path" <<'EOF'
 [Service]
 # WSL2 GPU passthrough is provided by AMD's WSL ROCm runtime. Do not preload a
-# versioned libhsa path: package upgrades can leave that path stale and force
-# Ollama's GPU-discovery subprocess to crash.
-Environment="HSA_ENABLE_DXG_DETECTION=1"
+# versioned libhsa path or set HSA_ENABLE_DXG_DETECTION: the latter makes this
+# ROCm 7.2 WSL runtime load an incompatible librocdxg ABI and crash.
 Environment="OLLAMA_LLM_LIBRARY=rocm_v7_2"
 Environment="OLLAMA_KEEP_ALIVE=5m"
 Environment="OLLAMA_CONTEXT_LENGTH=8192"

@@ -106,6 +106,11 @@ Also confirm the WSL runtime is installed:
 dpkg-query -W hsa-runtime-rocr4wsl-amdgpu
 ```
 
+Do **not** set `HSA_ENABLE_DXG_DETECTION=1` in `~/.bashrc`, the Ollama service,
+or another persistent environment file. With this ROCm 7.2 WSL runtime it loads
+an incompatible `librocdxg` ABI and makes both `rocminfo` and PyTorch crash. A
+clean shell with that variable unset must enumerate `gfx1100`.
+
 ## 4. Install uv
 
 If `uv` is not already installed, use the installation method published at
