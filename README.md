@@ -158,3 +158,9 @@ CNN fallback.
 # CUDA worker: resumably copy only BraTS 2020, then run seed 20260813
 ./scripts/sync_cuda_pilot.sh
 ```
+
+For a live CUDA health/telemetry view, run:
+
+```bash
+./scripts/watch_cuda.py --run runs/glioma-pilot--cuda--brats--20260812--e10
+```

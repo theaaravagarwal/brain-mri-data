@@ -9,3 +9,9 @@ Status: in progress.
 - Next acceptance point: three 10-epoch BraTS-only learning curves with runtime, checkpoint, telemetry, and internal-validation records.
 - These are engineering pilots, not external-performance results.
 - AMD is reserved for the bounded language layer after its GPU check passes.
+
+Monitor an active CUDA curve without modifying it:
+
+```bash
+./scripts/watch_cuda.py --run runs/glioma-pilot--cuda--brats--20260812--e10
+```
