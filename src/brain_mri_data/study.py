@@ -39,6 +39,23 @@ def _approved_mapping(source: dict[str, Any]) -> dict[str, Any]:
     return mapping
 
 
+def _approved_manual_provenance_review(study: dict[str, Any]) -> dict[str, Any]:
+    """Require attributable, dated evidence before a publication study is locked."""
+    review = study.get("manual_provenance_review")
+    if not isinstance(review, dict) or review.get("status") != "approved":
+        raise ValueError("A dated manual_provenance_review must be approved before locking a study")
+    for key in ("reviewer", "completed_at_utc", "evidence"):
+        if not isinstance(review.get(key), str) or not review[key].strip():
+            raise ValueError(f"manual_provenance_review needs a non-empty {key}")
+    try:
+        completed_at = datetime.fromisoformat(review["completed_at_utc"].replace("Z", "+00:00"))
+    except ValueError as error:
+        raise ValueError("manual_provenance_review.completed_at_utc must be an ISO-8601 timestamp") from error
+    if completed_at.tzinfo is None:
+        raise ValueError("manual_provenance_review.completed_at_utc must include a timezone")
+    return review
+
+
 def _valid_cases(source_id: str, manifest_root: Path) -> list[dict[str, Any]]:
     cases_path = manifest_root / f"{source_id}.cases.jsonl"
     qc_path = manifest_root / f"{source_id}.qc.jsonl"
@@ -76,8 +93,8 @@ def build_study_manifest(
     unknown = sorted(set(train_sources + test_sources) - set(sources))
     if unknown:
         raise ValueError("Unknown sources in study: " + ", ".join(unknown))
-    if not pilot and study.get("manual_provenance_review", {}).get("status") != "approved":
-        raise ValueError("A dated manual_provenance_review must be approved before locking a study")
+    if not pilot:
+        _approved_manual_provenance_review(study)
 
     if pilot:
         audit = {
