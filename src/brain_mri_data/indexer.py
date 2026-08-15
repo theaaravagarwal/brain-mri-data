@@ -169,3 +169,44 @@ def index_source(source_id: str, source: dict[str, Any], raw_root: Path, manifes
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     with path.open() as file:
         return [json.loads(line) for line in file if line.strip()]
+
+
+def verify_case_files(cases_path: Path, raw_root: Path) -> dict[str, Any]:
+    """Verify a portable case manifest against the original file fingerprints.
+
+    This is deliberately separate from NIfTI QC: a byte-identical transfer is
+    a provenance requirement even when a truncated or altered NIfTI might still
+    be readable.
+    """
+    verified, failures = 0, []
+    for case in read_jsonl(cases_path):
+        expected = case.get("provenance", {}).get("files", {})
+        stored = {**case.get("modalities", {})}
+        if "segmentation" in case:
+            stored["seg"] = case["segmentation"]
+        issues = []
+        if set(expected) != set(stored):
+            issues.append("fingerprint_manifest_mismatch")
+        for kind, relative_path in sorted(stored.items()):
+            fingerprint = expected.get(kind)
+            if not isinstance(fingerprint, dict) or not isinstance(fingerprint.get("sha256"), str) or not isinstance(fingerprint.get("bytes"), int):
+                issues.append(f"missing_fingerprint:{kind}")
+                continue
+            try:
+                actual_path = resolve_case_path(case, relative_path, raw_root)
+                actual = _fingerprint(actual_path)
+            except OSError as error:
+                issues.append(f"read_error:{kind}:{error}")
+                continue
+            if actual != fingerprint:
+                issues.append(f"hash_mismatch:{kind}")
+        if issues:
+            failures.append({"case_id": case.get("case_id"), "reasons": issues})
+        else:
+            verified += 1
+    return {
+        "manifest": str(cases_path),
+        "verified_cases": verified,
+        "failed_cases": len(failures),
+        "failures": failures,
+    }

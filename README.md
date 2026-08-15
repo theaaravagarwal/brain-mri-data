@@ -56,6 +56,7 @@ uv run brain-mri-data fetch brats2020_kaggle
 # Build case records (no image copying) and reject incomplete cases.
 uv run brain-mri-data discover brats2020_kaggle  # inventory only; writes nothing
 uv run brain-mri-data index brats2020_kaggle
+uv run brain-mri-data verify-files brats2020_kaggle
 uv run brain-mri-data validate brats2020_kaggle
 
 # Emit a deterministic, patient-level split and MONAI datalist.

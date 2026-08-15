@@ -10,5 +10,6 @@ rsync -a --partial --append-verify --info=progress2 \
 rsync -a "${AMD_HOST}:${REMOTE_ROOT}/data/manifests/brats2020_kaggle.cases.jsonl" data/manifests/
 rsync -a "${AMD_HOST}:${REMOTE_ROOT}/data/manifests/brats2020_kaggle.qc.jsonl" data/manifests/
 
+.venv/bin/brain-mri-data verify-files brats2020_kaggle
 uv sync --extra cuda
 exec ./scripts/train_cuda_pilot.sh 1 20260813

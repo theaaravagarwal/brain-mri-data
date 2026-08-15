@@ -7,7 +7,7 @@ from pathlib import Path
 from .catalog import get_source, load_catalog, project_root
 from .experiment_audit import audit_experiment
 from .fetch import fetch_automatic, fetch_source
-from .indexer import discover_source, index_source, read_jsonl, resolve_case_path
+from .indexer import discover_source, index_source, read_jsonl, resolve_case_path, verify_case_files
 from .qc import validate_cases
 from .splits import make_split
 from .study import build_study_manifest
@@ -34,6 +34,8 @@ def main() -> None:
     index = sub.add_parser("index"); index.add_argument("source_id")
     discover = sub.add_parser("discover"); discover.add_argument("source_id")
     validate = sub.add_parser("validate"); validate.add_argument("source_id")
+    verify = sub.add_parser("verify-files", help="verify manifest file hashes without re-indexing")
+    verify.add_argument("source_id")
     split = sub.add_parser("split"); split.add_argument("source_id"); split.add_argument("--seed", type=int, required=True)
     export = sub.add_parser("export-monai"); export.add_argument("source_id")
     external = sub.add_parser("export-external-monai")
@@ -133,6 +135,12 @@ def main() -> None:
         path, accepted, rejected = index_source(args.source_id, source, raw_root, manifest_root)
         print(f"{path}: accepted={accepted} rejected={rejected}"); return
     cases_path = manifest_root / f"{args.source_id}.cases.jsonl"
+    if args.command == "verify-files":
+        report = verify_case_files(cases_path, raw_root)
+        print(json.dumps(report, indent=2, sort_keys=True))
+        if report["failed_cases"]:
+            raise SystemExit(2)
+        return
     if args.command == "validate":
         results = validate_cases(cases_path, raw_root, source)
         out = manifest_root / f"{args.source_id}.qc.jsonl"
