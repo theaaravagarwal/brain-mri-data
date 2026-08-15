@@ -1,0 +1,16 @@
+schema_version: 1
+study_id: glioma
+mode: pilot_internal_only
+protocol: glioma_4seq_v1
+train_sources: [brats2020_kaggle]
+locked_test_sources: []
+development_split_seed: 20260812
+study_patch_size: [80, 80, 80]
+effective_batch_size: 4
+arms: [brats]
+seeds: [20260812]
+manual_provenance_review:
+  status: not_required_for_internal_pilot
+  reviewer: null
+  completed_at_utc: null
+  evidence: null

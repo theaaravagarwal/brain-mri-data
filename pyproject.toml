@@ -6,14 +6,35 @@ build-backend = "setuptools.build_meta"
 name = "brain-mri-data"
 version = "0.1.0"
 description = "Provenance-first four-sequence brain MRI dataset aggregator"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.12,<3.13"
 dependencies = ["PyYAML>=6.0", "huggingface_hub>=0.25", "kagglehub>=0.3"]
 
 [project.optional-dependencies]
 qc = ["nibabel>=5.2", "numpy>=1.26"]
+amd = [
+  "nibabel>=5.2",
+  "numpy>=1.26",
+  "monai==1.6.0",
+  "torch @ https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2/torch-2.9.1%2Brocm7.2.0.lw.git7e1940d4-cp312-cp312-linux_x86_64.whl",
+  "triton @ https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2/triton-3.5.1%2Brocm7.2.0.gita272dfa8-cp312-cp312-linux_x86_64.whl",
+]
+cuda = [
+  "nibabel>=5.2",
+  "numpy>=1.26",
+  "monai==1.6.0",
+  "torch @ https://download.pytorch.org/whl/cu128/torch-2.9.1%2Bcu128-cp312-cp312-manylinux_2_28_x86_64.whl",
+]
 
 [project.scripts]
 brain-mri-data = "brain_mri_data.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.uv]
+conflicts = [
+  [
+    { extra = "amd" },
+    { extra = "cuda" },
+  ],
+]

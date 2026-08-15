@@ -55,6 +55,29 @@ def _fingerprint(path: Path) -> dict[str, str | int]:
     return {"sha256": digest.hexdigest(), "bytes": path.stat().st_size}
 
 
+def relative_source_path(path: Path, source_root: Path) -> str:
+    """Return a manifest-safe path relative to one source's raw directory."""
+    return path.resolve().relative_to(source_root.resolve()).as_posix()
+
+
+def resolve_case_path(record: dict[str, Any], stored_path: str, raw_root: Path) -> Path:
+    """Resolve a portable manifest path without permitting directory traversal.
+
+    Version-1 manifests stored absolute paths.  New manifests intentionally store
+    paths relative to ``data/raw/<source_id>`` so the same manifest can be used
+    on each training worker.  Refusing absolute and ``..`` paths makes a copied
+    manifest unable to escape its declared source root.
+    """
+    relative = Path(stored_path)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError(f"Manifest path must be source-relative: {stored_path}")
+    source_root = (raw_root / record["source_id"]).resolve()
+    resolved = (source_root / relative).resolve()
+    if source_root not in resolved.parents and resolved != source_root:
+        raise ValueError(f"Manifest path escapes source root: {stored_path}")
+    return resolved
+
+
 def discover_source(source_id: str, source: dict[str, Any], raw_root: Path) -> dict[str, Any]:
     source_root = raw_root / source_id
     if not source_root.exists():
@@ -116,15 +139,18 @@ def index_source(source_id: str, source: dict[str, Any], raw_root: Path, manifes
             "patient_id": case_id,
             "source_id": source_id,
             "protocol": source.get("protocol", "unassigned"),
-            "modalities": {key: str(files[key]) for key in source["modalities"]},
+            "modalities": {
+                key: relative_source_path(files[key], source_root)
+                for key in source["modalities"]
+            },
             "provenance": {
                 "provider": source["provider"], "locator": source["locator"],
-                "source_root": str(source_root.resolve()),
+                "path_scheme": "source_relative_v1",
                 "files": {key: _fingerprint(files[key]) for key in sorted(required)},
             },
         }
         if "seg" in files:
-            record["segmentation"] = str(files["seg"])
+            record["segmentation"] = relative_source_path(files["seg"], source_root)
         accepted.append(record)
 
     manifest_root.mkdir(parents=True, exist_ok=True)

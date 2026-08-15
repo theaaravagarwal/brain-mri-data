@@ -1,0 +1,6 @@
+schema_version: 1
+study_id: glioma
+study_manifest: glioma.locked.json
+profiles: [cuda, amd]
+arms: [brats, pooled, pamc]
+seeds: [20260812, 20260813, 20260814]

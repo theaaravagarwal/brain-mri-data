@@ -1,38 +1,35 @@
-# Architecture decision: multi-tumor MRI on AMD ROCm
+# Architecture decision: ISEF adult-glioma MRI study
 
-## First prototype
+## Competition scope
 
-Input is exactly four co-registered channels: `T1, T1ce, T2, FLAIR`.
-Preprocess with orientation/spacing checks, nonzero z-score normalization per
-channel, and fixed-size 3D patches. The output is a three-region BraTS mask
-(whole tumour, tumour core, enhancing tumour); the clinical localization output
-is the axis-aligned 3D bounding box of the predicted whole-tumour component.
+The ISEF project is one adult-glioma research question: whether provenance-
+audited source-diverse training with PAMC (provenance-aware modality
+consistency) improves external whole-lesion segmentation. Meningioma, pediatric glioma, metastasis, LLM
+explanations, routing, and clinical deployment are outside this study.
 
-Start with MONAI SegResNet. It is substantially cheaper than a transformer and
-fits a 20-GB card with mixed precision and 96^3 patches. Add a global
-classification/presence head from encoder features after the baseline is sound.
-The box head is an experiment, not the source of truth: enforce consistency
-with the mask-derived box loss.
+Input is exactly four co-registered channels: `T1`, `T1ce`, `T2`, and `FLAIR`.
+Every evaluated case requires a reviewed voxel mask. Whole-lesion boxes are
+derived from the mask and never used as an independent label.
 
-| Hardware | Baseline settings |
-| --- | --- |
-| AMD RX 7900 XT (20 GB) | PyTorch ROCm build, 96^3 patch, batch 1, AMP, gradient accumulation 4 |
+## Fixed scientific configuration
 
-Validate the exact accelerator/PyTorch/MONAI combination on the training
-machine before installing it. The dataset aggregator deliberately installs no
-ROCm, PyTorch, or MONAI packages, and the project has no CUDA path.
+All three arms use a MONAI SegResNet, the same preprocessing, 80^3 patches,
+batch size one, effective batch size four, fixed source manifests, and the same
+three seeds. The arms are BraTS-only baseline, provenance-audited pooled
+baseline, and PAMC extension. BraTS-Africa is locked before
+training as the primary external test set.
 
-## Novel-but-defensible extension
+## Independent training workers
 
-After the baseline, add modality-aware cross-attention plus a joint
-segmentation/presence/box-consistency objective. This is publishable only with
-ablations against SegResNet/nnU-Net-style baselines and a true external holdout;
-architecture novelty alone is not enough.
+| Worker | Runtime preset | Settings |
+| --- | --- | --- |
+| NVIDIA RTX 3060, 12 GB VRAM | `cuda` | CUDA FP16, two loader workers, 80^3 patch |
+| AMD RX 7900 XTX, CPU-limited | `amd` | ROCm FP16, one loader worker, low prefetch, 80^3 patch |
 
-## Modular future scope
+Workers train independent `(arm, seed)` jobs; CUDA and ROCm are not combined in
+distributed training. The controller locks manifests and claims, while each
+worker retains its own legal local raw-data copy. Synchronize only configs,
+metrics, checkpoints, and non-identifying prediction artifacts over Tailscale.
 
-Adult glioma, meningioma, pediatric glioma, and metastasis models are separate,
-protocol-bound modules, each with its own four-sequence data, label ontology,
-calibration, and test set. A deterministic input protocol router may select a
-module. An LLM is restricted to explaining structured outputs and uncertainty
-flags; it is not a medical decision-maker or model router.
+The importer environment has no training framework. Use `uv sync --extra cuda`
+or `uv sync --extra amd` in a separate Python 3.12 environment, never both.

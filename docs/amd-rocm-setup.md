@@ -1,6 +1,6 @@
-# AMD RX 7900 XT training environment
+# AMD RX 7900 XTX training environment
 
-This setup targets **WSL2** with x86-64 Ubuntu 24.04, AMD Radeon RX 7900 XT/XTX,
+This setup targets **WSL2** with x86-64 Ubuntu 24.04, AMD Radeon RX 7900 XTX,
 ROCm 7.2, Python 3.12, and AMD's production-supported PyTorch 2.9.1
 wheel. It does not install CUDA or any NVIDIA packages.
 
@@ -51,6 +51,16 @@ reinstall/update the WSL distribution rather than installing native Linux DKMS
 drivers inside it.
 
 ## 3. Install the WSL-specific ROCm user space
+
+For a host with the wrong native-Linux AMD installer or a missing WSL HSA
+runtime, run this helper from an interactive terminal on the AMD worker. It
+prompts for your sudo password, removes only an incompatible native ROCm stack
+when detected, and installs AMD's official WSL 7.2 use case. Do not run it
+from a non-interactive SSH job:
+
+```bash
+./scripts/repair_amd_wsl_host.sh
+```
 
 If `rocminfo` prints `WSL environment detected` followed by `hsa_init Failed`,
 check the installed runtime:
@@ -108,15 +118,16 @@ shell.
 ./scripts/install_amd_training_env.sh
 ```
 
-This creates `.venv-train`, installs the project/QC dependencies, installs only
-AMD's WSL-compatible ROCm 7.2 PyTorch and Triton wheels, removes the Linux
-wheel's bundled HSA runtime as AMD requires for WSL, installs MONAI, and runs an
-actual matrix multiplication on the GPU.
+This runs `uv sync --extra amd` into `.venv`, installs AMD's WSL-compatible
+ROCm 7.2 PyTorch and Triton wheels, replaces the Linux wheel's bundled HSA
+runtime with `/opt/rocm/lib/libhsa-runtime64.so.1.2` as AMD requires for WSL,
+installs MONAI, and runs an actual matrix multiplication on the GPU. Do not
+install the `cuda` extra in this environment.
 
 Use the environment explicitly:
 
 ```bash
-source .venv-train/bin/activate
+source .venv/bin/activate
 python scripts/verify_amd_training.py
 brain-mri-data --help
 ```

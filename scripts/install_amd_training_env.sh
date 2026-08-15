@@ -48,20 +48,20 @@ if ! rocminfo 2>/dev/null | grep -q "gfx1100"; then
 fi
 
 uv python install 3.12
-uv venv .venv-train --python 3.12
+uv sync --extra amd --python 3.12
 
-TRAIN_PYTHON=".venv-train/bin/python"
-ROCM_WHEEL_ROOT="https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2"
+TRAIN_PYTHON=".venv/bin/python"
 
-uv pip install --python "$TRAIN_PYTHON" -e ".[qc]" "numpy==1.26.4"
-uv pip install --python "$TRAIN_PYTHON" \
-  "$ROCM_WHEEL_ROOT/torch-2.9.1%2Brocm7.2.0.lw.git7e1940d4-cp312-cp312-linux_x86_64.whl" \
-  "$ROCM_WHEEL_ROOT/triton-3.5.1%2Brocm7.2.0.gita272dfa8-cp312-cp312-linux_x86_64.whl"
-uv pip install --python "$TRAIN_PYTHON" "monai==1.6.0"
-
-# AMD's WSL instructions require the Windows-provided HSA runtime instead of
-# the runtime bundled inside the Linux PyTorch wheel.
+# AMD's WSL instructions require the WSL-compatible HSA runtime instead of the
+# native Linux runtime bundled inside the PyTorch wheel.
 TORCH_LIB_DIR="$($TRAIN_PYTHON -c 'from importlib.util import find_spec; from pathlib import Path; print(Path(find_spec("torch").origin).parent / "lib")')"
+WSL_HSA_RUNTIME="$(readlink -f /opt/rocm/lib/libhsa-runtime64.so 2>/dev/null || true)"
+if [[ -z "$WSL_HSA_RUNTIME" || ! -f "$WSL_HSA_RUNTIME" ]]; then
+  echo "Missing WSL HSA runtime under /opt/rocm/lib/." >&2
+  echo "Install the WSL ROCm use case before creating the Python environment." >&2
+  exit 1
+fi
 find "$TORCH_LIB_DIR" -maxdepth 1 -type f -name 'libhsa-runtime64.so*' -delete
+cp "$WSL_HSA_RUNTIME" "$TORCH_LIB_DIR/libhsa-runtime64.so"
 
 "$TRAIN_PYTHON" scripts/verify_amd_training.py

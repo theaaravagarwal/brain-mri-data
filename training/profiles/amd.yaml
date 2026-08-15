@@ -1,0 +1,14 @@
+schema_version: 1
+profile_id: amd
+accelerator: amd
+tailscale_address: 100.64.0.5
+expected_gpu_name_contains: Radeon
+mixed_precision: fp16
+batch_size: 1
+effective_batch_size: 4
+num_workers: 1
+prefetch_factor: 1
+persistent_workers: true
+pin_memory: true
+patch_size: [80, 80, 80]
+notes: RX 7900 XTX; CPU-limited, so avoid CPU-heavy online transforms

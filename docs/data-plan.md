@@ -5,14 +5,14 @@
 
 ## Overview
 
-Create a provenance-first corpus for a glioma-only 3D MRI
-segmentation and mask-derived bounding-box system. Keep raw sources independent
-and make training composition a manifest choice.
+Create a provenance-first corpus for a focused adult-glioma 3D MRI
+segmentation study. Keep raw sources independent and lock training composition
+in a study manifest before any model run.
 
 ## Prerequisites
 
 - Kaggle credentials for Kaggle sources; Hugging Face authentication only for a gated source.
-- A Python 3.11--3.13 environment and 1 TB usable storage. Budget about 251 GB
+- A Python 3.12 environment and 1 TB usable storage. Budget about 251 GB
   for the recommended raw corpus, 150--300 GB for preprocessed/cache artifacts,
   and 100 GB for experiments/checkpoints; monitor actual disk use.
 - Confirm data-use terms at download time; catalog metadata is not a legal determination.
@@ -43,20 +43,24 @@ and make training composition a manifest choice.
 - **Acceptance:** Affine/shape mismatches, empty masks, and missing files are reported; boxes include voxel and world coordinates.
 - **Validation:** `brain-mri-data validate brats2020_kaggle`.
 
-### Task 2.2: Build source-aware splits
-- **Location:** `src/brain_mri_data/splits.py`
-- **Complexity:** 5
-- **Acceptance:** No patient ID appears in more than one split.
-- **Validation:** fixed-seed repeat produces byte-identical output.
+### Task 2.2: Lock a source-aware study
+- **Location:** `src/brain_mri_data/study.py`
+- **Complexity:** 6
+- **Acceptance:** All label mappings and manual provenance review are approved,
+  source hashes are frozen, and BraTS-Africa is locked before training.
+- **Validation:** `brain-mri-data build-study ...` refuses pending reviews,
+  unapproved mappings, lineage risks, and an existing lock file.
 
 ## Sprint 3: Train and benchmark
 
-**Goal:** Establish 3D SegResNet baseline, then test a multi-task extension.
+**Goal:** Establish a 3D SegResNet baseline, then test PAMC pooled training
+without changing preprocessing, compute budget, or locked test cases.
 
-### Task 3.1: Train segmentation baseline
-- **Location:** future `training/`
+### Task 3.1: Train dual-worker segmentation baselines
+- **Location:** `training/`
 - **Complexity:** 8
-- **Acceptance:** Dice/HD95 and 3D box metrics are reported on locked test cases.
+- **Acceptance:** CUDA and ROCm jobs use the same 80^3 study setting and
+  effective batch size; each records its runtime profile and hardware telemetry.
 
 ### Task 3.2: External validation
 - **Dependencies:** provenance review of a non-overlapping external source.

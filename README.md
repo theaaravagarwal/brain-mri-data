@@ -20,13 +20,26 @@ uv python install 3.12
 uv sync --extra qc
 ```
 
-This project intentionally does not install PyTorch, ROCm, or MONAI as part of
-the data-import environment. Training targets the AMD RX 7900 XT exclusively;
-the ROCm-enabled PyTorch stack will be installed separately inside WSL2 after
-the Windows AMD WSL driver exposes the GPU. CUDA is not part of this project.
+This project intentionally does not install PyTorch, ROCm, CUDA, or MONAI in
+the default data-import environment. Training uses one of two mutually
+exclusive extras on separate workers:
 
-See [the AMD ROCm setup guide](docs/amd-rocm-setup.md) for the exact host and
-Python-environment procedure.
+```bash
+# AMD RX 7900 XTX ROCm worker (WSL2/Linux)
+uv sync --extra amd
+
+# NVIDIA RTX 3060 12-GB CUDA worker (Linux/WSL2)
+uv sync --extra cuda
+```
+
+Never enable both extras in one environment. They contain different PyTorch
+builds. The AMD worker is CPU-limited, so its profile deliberately uses one
+data-loader worker; the CUDA worker uses two. Both profiles retain the same
+80^3 scientific patch configuration and effective batch size.
+
+See [the AMD ROCm setup guide](docs/amd-rocm-setup.md) and
+[the NVIDIA CUDA setup guide](docs/cuda-setup.md) for host checks and
+verification.
 
 Kaggle access requires `~/.kaggle/kaggle.json` or `KAGGLE_*` credentials.
 Hugging Face access requires `huggingface-cli login` for gated repos.
@@ -67,7 +80,9 @@ silently fetched by the CLI.
 `discover` scans nested NIfTI layouts without modifying them. `index` recognizes
 standard modality aliases (such as `t1n`, `t1c`, `t2w`, and `t2f`), refuses
 ambiguous duplicates rather than guessing, hashes every accepted source file,
-and emits a discovery report plus a detailed exclusion manifest.
+and emits a discovery report plus a detailed exclusion manifest. New manifests
+store source-relative paths, allowing the same indexed manifest to resolve
+against each worker's local `data/raw/` copy; SHA-256 hashes preserve identity.
 
 Before any training split is accepted, audit the proposed source lineage:
 
@@ -98,3 +113,39 @@ be deterministic from the protocol (`glioma_4seq_v1`), not agentic.
 See `docs/architecture.md` for the training path and `docs/data-plan.md` for
 the project plan. See `docs/multitumor-scope-audit.md` for the consequences of
 expanding beyond glioma.
+
+## ISEF study workflow
+
+The competition study is intentionally one adult-glioma question: whether
+provenance-audited source-diverse training and PAMC (provenance-aware modality
+consistency) improve locked external segmentation. It does not include multi-tumor routing,
+an LLM, or a diagnostic application.
+
+After a human review approves each source's whole-lesion label mapping and
+provenance evidence, lock the study rather than assembling cohorts in training
+code:
+
+```bash
+uv run brain-mri-data build-study config/studies/glioma.yaml --output glioma.locked.json
+
+uv run brain-mri-data runs list config/run-matrix/glioma.yaml
+uv run brain-mri-data runs claim config/run-matrix/glioma.yaml glioma--cuda--brats--20260812 --profile cuda
+```
+
+Use a controller-side `data/experiments/` directory for claims. Workers should
+claim jobs through Tailscale/SSH and synchronize only run artifacts, never raw
+MRI volumes.
+
+After the study has been locked, start a concise PAMC run with:
+
+```bash
+.venv/bin/python training/train_glioma.py \
+  --study data/manifests/glioma.locked.json \
+  --profile training/profiles/cuda.yaml \
+  --arm pamc --seed 20260812 --output runs/glioma--cuda--pamc--20260812
+```
+
+PAMC is the research contribution: it combines source-adversarial features
+with a consistency loss after one MRI sequence is intentionally masked. It is
+evaluated on a locked external cohort both with all four sequences and under
+the controlled masking condition; it is not a diagnosis system or an LLM.

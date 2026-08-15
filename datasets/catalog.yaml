@@ -77,6 +77,11 @@ sources:
     protocol: glioma_4seq_v1
     module: adult_glioma
     label_ontology: brats_adult_legacy_1_2_4
+    label_schema: brats_legacy_124
+    label_mapping:
+      status: approved
+      whole_lesion:
+        positive_values: [1, 2, 4]
     potential_cohort_overlap_groups: [brats_adult_glioma_ecosystem, upenn, ucsf]
     notes: >-
       Multi-institutional BraTS 2020 mirror. Training cases have masks; validation
@@ -139,8 +144,28 @@ sources:
     protocol: meningioma_4seq_v1
     module: meningioma
     label_ontology: brats_meningioma_2023
+    label_schema: brats_meningioma_123
     potential_cohort_overlap_groups: [brats_meningioma_ecosystem]
     notes: Keep this as a separate meningioma model/data module; review original BraTS terms and label schema.
+  brats2023_ssa_hf:
+    provider: huggingface
+    locator: Angelou0516/brats2023-ssa
+    revision: main
+    format: nifti_3d
+    tumor_scope: glioma
+    modalities: [t1, t1ce, t2, flair]
+    has_segmentation: true
+    estimated_gb: 0.71
+    license: CC-BY-4.0
+    status: external_candidate
+    protocol: glioma_4seq_v1
+    module: adult_glioma
+    label_ontology: brats_africa_2023
+    label_schema: brats_africa_123
+    label_mapping:
+      status: pending_review
+    potential_cohort_overlap_groups: [brats_africa]
+    notes: Public BraTS-Africa NIfTI mirror; retain as a domain-shift cohort and do not mix into validation without a predeclared split.
   pituitary_2d_kaggle:
     provider: kaggle
     locator: rm1000/brain-tumor-mri-scans
@@ -165,6 +190,8 @@ sources:
     protocol: glioma_4seq_v1
     module: adult_glioma
     label_ontology: utsw_multilabel_glioma
+    label_mapping:
+      status: pending_review
     potential_cohort_overlap_groups: [utsw]
     notes: 625 cases; multi-label tumor masks and molecular data. Download via TCIA/Aspera, then place raw files under data/raw/utsw_glioma_tcia.
   ucsf_pdgm_tcia:
@@ -180,6 +207,8 @@ sources:
     protocol: glioma_4seq_v1
     module: adult_glioma
     label_ontology: ucsf_pdgm_multilabel
+    label_mapping:
+      status: pending_review
     potential_cohort_overlap_groups: [ucsf]
     notes: ~500 subjects. Over 100-GB cap in full; acquire a documented patient subset or use as a future external evaluation source.
   upenn_gbm_tcia:
@@ -210,6 +239,8 @@ sources:
     protocol: glioma_4seq_v1
     module: adult_glioma
     label_ontology: brats_africa_source_specific
+    label_mapping:
+      status: pending_review
     potential_cohort_overlap_groups: [brats_africa]
     notes: 146 cases from six Nigerian centers; a high-value domain-shift evaluation source.
   remind_tcia:
