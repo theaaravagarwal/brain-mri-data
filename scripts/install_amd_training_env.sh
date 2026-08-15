@@ -42,7 +42,11 @@ if ! dpkg-query -W -f='${Status}' hsa-runtime-rocr4wsl-amdgpu 2>/dev/null \
   exit 1
 fi
 
-if ! rocminfo 2>/dev/null | grep -q "gfx1100"; then
+rocminfo_output="$(rocminfo 2>&1)" || {
+  echo "rocminfo failed while checking the RX 7900 XT/XTX." >&2
+  exit 1
+}
+if ! grep -q "gfx1100" <<<"$rocminfo_output"; then
   echo "ROCm does not expose the RX 7900 XT/XTX (expected gfx1100)." >&2
   exit 1
 fi
