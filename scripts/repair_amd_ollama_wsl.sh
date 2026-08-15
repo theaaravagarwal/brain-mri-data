@@ -12,15 +12,29 @@ if ! command -v ollama >/dev/null; then
   exit 1
 fi
 
+gpu_ready=false
 set +e
 rocminfo_output="$(rocminfo 2>&1)"
 rocminfo_status=$?
 set -e
-if ! grep -q 'gfx1100' <<<"$rocminfo_output"; then
+if grep -q 'gfx1100' <<<"$rocminfo_output"; then
+  gpu_ready=true
+elif [[ -x .venv/bin/python ]] && .venv/bin/python - <<'PY'
+import torch
+assert torch.version.hip is not None
+assert torch.cuda.is_available()
+values = torch.ones((32, 32), device="cuda")
+assert values.sum().item() == 1024
+PY
+then
+  echo "rocminfo was unreliable, but a real ROCm PyTorch tensor check passed."
+  gpu_ready=true
+fi
+if [[ "$gpu_ready" != true ]]; then
   if [[ $rocminfo_status -ne 0 ]]; then
     echo "rocminfo failed while checking the RX 7900 XT/XTX." >&2
   fi
-  echo "ROCm does not expose the RX 7900 XTX/XT as gfx1100; do not start Ollama yet." >&2
+  echo "Neither rocminfo nor a real ROCm compute check can see gfx1100; do not start Ollama yet." >&2
   exit 1
 fi
 
