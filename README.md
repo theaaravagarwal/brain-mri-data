@@ -149,10 +149,10 @@ PAMC is the research contribution: it combines source-adversarial features
 with a consistency loss after one MRI sequence is intentionally masked. It is
 evaluated on a locked external cohort both with all four sequences and under
 the controlled masking condition; it is not a diagnosis system or an LLM.
-# Concurrent pilot runs
+# CUDA pilot run
 
-The completed AMD checks are engineering pilots only. Use CUDA for the active
-pilot curve; do not start a second AMD CNN pilot.
+Use CUDA for every CNN pilot and frozen CNN study run. The AMD worker is not a
+CNN fallback.
 
 ```bash
 # CUDA worker: resumably copy only BraTS 2020, then run seed 20260813

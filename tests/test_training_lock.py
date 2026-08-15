@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from training.train_glioma import validate_profile_against_study
+from training.train_glioma import validate_cnn_accelerator, validate_profile_against_study
 
 
 class TrainingLockTests(unittest.TestCase):
@@ -28,3 +28,10 @@ class TrainingLockTests(unittest.TestCase):
             validate_profile_against_study({**self.profile, "patch_size": [96, 96, 96]}, self.study)
         with self.assertRaisesRegex(ValueError, "effective_batch_size"):
             validate_profile_against_study({**self.profile, "effective_batch_size": 2}, self.study)
+
+    def test_cnn_study_rejects_rocm_profiles(self) -> None:
+        validate_cnn_accelerator({"accelerator": "cuda"}, None)
+        with self.assertRaisesRegex(ValueError, "restricted to the CUDA"):
+            validate_cnn_accelerator({"accelerator": "amd"}, "7.2")
+        with self.assertRaisesRegex(ValueError, "CUDA PyTorch"):
+            validate_cnn_accelerator({"accelerator": "cuda"}, "7.2")

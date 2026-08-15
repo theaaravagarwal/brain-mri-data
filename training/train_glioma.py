@@ -90,6 +90,14 @@ def validate_profile_against_study(profile: dict[str, Any], study: dict[str, Any
         raise ValueError("Runtime profile mixed_precision must match the locked study")
 
 
+def validate_cnn_accelerator(profile: dict[str, Any], hip_version: str | None) -> None:
+    """This project reserves AMD compute for the bounded language layer."""
+    if profile["accelerator"] != "cuda":
+        raise ValueError("The frozen ISEF CNN study is restricted to the CUDA runtime profile")
+    if hip_version is not None:
+        raise ValueError("The cuda profile requires a CUDA PyTorch build")
+
+
 def set_seed(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
@@ -218,10 +226,7 @@ def main() -> None:
     profile = load_profile(args.profile)
     if not torch.cuda.is_available():
         raise SystemExit("Selected training environment cannot access a GPU")
-    if profile["accelerator"] == "amd" and torch.version.hip is None:
-        raise SystemExit("The amd profile requires a ROCm PyTorch build")
-    if profile["accelerator"] == "cuda" and torch.version.hip is not None:
-        raise SystemExit("The cuda profile requires a CUDA PyTorch build")
+    validate_cnn_accelerator(profile, torch.version.hip)
     study = json.loads(args.study.read_text())
     if study.get("study", {}).get("study_id") != "glioma":
         raise ValueError("This trainer only accepts the locked glioma study")
