@@ -12,11 +12,14 @@ if ! command -v ollama >/dev/null; then
   exit 1
 fi
 
-rocminfo_output="$(rocminfo 2>&1)" || {
-  echo "rocminfo failed while checking the RX 7900 XT/XTX." >&2
-  exit 1
-}
+set +e
+rocminfo_output="$(rocminfo 2>&1)"
+rocminfo_status=$?
+set -e
 if ! grep -q 'gfx1100' <<<"$rocminfo_output"; then
+  if [[ $rocminfo_status -ne 0 ]]; then
+    echo "rocminfo failed while checking the RX 7900 XT/XTX." >&2
+  fi
   echo "ROCm does not expose the RX 7900 XTX/XT as gfx1100; do not start Ollama yet." >&2
   exit 1
 fi
