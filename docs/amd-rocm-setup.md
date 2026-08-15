@@ -155,6 +155,21 @@ the GPU to WSL through `/dev/dxg`. Use the project monitor instead:
 It combines Linux trainer CPU/RAM with Windows GPU adapter memory and compute
 engine counters. Press `Ctrl-C` to stop monitoring; it does not stop training.
 
+## Restarting WSL from Windows
+
+Never run `wsl --shutdown` through the AMD worker's SSH connection: it closes
+the connection that is executing the command. Run the Windows-side launcher
+instead. It shuts WSL down, waits four seconds, and starts the default
+distribution so systemd and Tailscale can recover:
+
+```text
+Restart-BrainMRI-WSL.bat
+```
+
+The repository copies this pair to the Windows Documents folder when the AMD
+worker is configured. Run the `.bat` by double-clicking it or from a Windows
+PowerShell window; do not run it inside WSL.
+
 ## Optional: Ollama research-language worker
 
 Ollama is optional and is only for the constrained research-language benchmarks
