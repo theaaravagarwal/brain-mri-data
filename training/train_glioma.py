@@ -34,10 +34,10 @@ from monai.transforms import (
 from brain_mri_data.indexer import resolve_case_path
 if __package__:
     from .pamc import PamcSegResNet, mask_one_modality, modality_consistency_loss
-    from .evaluation import box_iou_per_case, deterministic_mask_one_modality, dice_per_case
+    from .evaluation import box_iou_per_case, deterministic_mask_one_modality, dice_per_case, hd95_mm_per_case
 else:
     from pamc import PamcSegResNet, mask_one_modality, modality_consistency_loss
-    from evaluation import box_iou_per_case, deterministic_mask_one_modality, dice_per_case
+    from evaluation import box_iou_per_case, deterministic_mask_one_modality, dice_per_case, hd95_mm_per_case
 
 
 MODALITY_ORDER = ("t1", "t1ce", "t2", "flair")
@@ -181,17 +181,21 @@ def evaluate(
             labels = batch["label"].to(device)
             dice = dice_per_case(logits, labels)
             box_iou = box_iou_per_case(logits, labels)
+            hd95 = hd95_mm_per_case(logits, labels)
             per_case.extend({
                 "case_id": case_id,
                 "whole_lesion_dice": score,
                 "derived_box_iou": box_score,
+                "hd95_mm": hd95_score,
                 **({"masked_modality": modality} if modality is not None else {}),
-            } for case_id, score, box_score, modality in zip(case_ids, dice, box_iou, masked_modalities, strict=True))
+            } for case_id, score, box_score, hd95_score, modality in zip(case_ids, dice, box_iou, hd95, masked_modalities, strict=True))
     if not per_case:
         raise ValueError("Evaluation loader yielded no cases")
     return {
         "mean_dice": float(np.mean([item["whole_lesion_dice"] for item in per_case])),
         "mean_derived_box_iou": float(np.mean([item["derived_box_iou"] for item in per_case])),
+        "mean_hd95_mm": float(np.mean([item["hd95_mm"] for item in per_case if item["hd95_mm"] is not None])) if any(item["hd95_mm"] is not None for item in per_case) else None,
+        "hd95_defined_cases": sum(item["hd95_mm"] is not None for item in per_case),
         "per_case": per_case,
     }
 
@@ -210,6 +214,17 @@ def main() -> None:
         raise ValueError("This trainer only accepts the locked glioma study")
     if args.arm not in study["study"]["arms"]:
         raise ValueError(f"Arm is not present in the locked study: {args.arm}")
+    training = study["study"].get("training", {})
+    required_training = {"architecture", "init_filters", "validation_interval", "optimizer", "learning_rate", "weight_decay", "mixed_precision"}
+    if required_training - set(training):
+        raise ValueError("Locked study has incomplete training configuration")
+    if training["architecture"] != "monai_segresnet" or training["optimizer"] != "adamw" or training["mixed_precision"] != "fp16":
+        raise ValueError("Locked study requests an unsupported training configuration")
+    if args.init_filters != int(training["init_filters"]) or args.validation_interval != int(training["validation_interval"]):
+        raise ValueError("Command-line model settings must match the locked study")
+    if study["evaluation_status"] == "external_test_locked":
+        if args.epochs != int(training.get("epochs", -1)):
+            raise ValueError("External-study epoch budget must match the locked study")
 
     set_seed(args.seed)
     torch.multiprocessing.set_sharing_strategy("file_system")
@@ -235,7 +250,11 @@ def main() -> None:
     source_count = len(study["study"]["train_sources"])
     device = torch.device("cuda:0")
     model = PamcSegResNet(args.init_filters, source_count).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=2e-4, weight_decay=1e-5)
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=float(training["learning_rate"]),
+        weight_decay=float(training["weight_decay"]),
+    )
     segmentation_loss = DiceCELoss(sigmoid=True, squared_pred=True, to_onehot_y=False)
     scaler = torch.amp.GradScaler("cuda", enabled=True)
     settings = study["study"].get("method", {}).get("pamc", {})
@@ -254,6 +273,7 @@ def main() -> None:
         "seed": args.seed,
         "epochs": args.epochs,
         "init_filters": args.init_filters,
+        "training_config": training,
         "trainer_sha256": file_sha256(Path(__file__)),
         "pamc_sha256": file_sha256(Path(__file__).with_name("pamc.py")),
         "git_revision": git_revision(),
@@ -261,6 +281,11 @@ def main() -> None:
         "torch": torch.__version__,
         "hip": torch.version.hip,
         "cuda": torch.version.cuda,
+        "hardware": {
+            "device_name": torch.cuda.get_device_name(device),
+            "device_count": torch.cuda.device_count(),
+            "total_memory_bytes": torch.cuda.get_device_properties(device).total_memory,
+        },
     }
     (args.output / "run.json").write_text(json.dumps(run, indent=2, sort_keys=True) + "\n")
 

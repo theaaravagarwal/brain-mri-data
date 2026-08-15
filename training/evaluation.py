@@ -6,6 +6,7 @@ import hashlib
 from typing import Iterable
 
 import torch
+from monai.metrics import compute_hausdorff_distance
 
 
 MODALITY_ORDER = ("t1", "t1ce", "t2", "flair")
@@ -68,3 +69,34 @@ def box_iou_per_case(logits: torch.Tensor, labels: torch.Tensor) -> list[float]:
         union = pred_volume[0] * pred_volume[1] * pred_volume[2] + ref_volume[0] * ref_volume[1] * ref_volume[2] - overlap
         values.append(float(overlap / union))
     return values
+
+
+def hd95_mm_per_case(logits: torch.Tensor, labels: torch.Tensor) -> list[float | None]:
+    """Compute HD95 in physical millimetres using MONAI's retained NIfTI spacing.
+
+    An empty prediction has no surface distance, so it is represented as null
+    rather than silently converted to zero. Reference masks are non-empty by
+    the dataset QC gate.
+    """
+    spacing = getattr(labels, "meta", {}).get("pixdim")
+    if spacing is None:
+        raise ValueError("NIfTI voxel spacing is missing from label metadata")
+    spacing = torch.as_tensor(spacing).detach().cpu()
+    if spacing.ndim != 2 or spacing.shape[0] != labels.shape[0] or spacing.shape[1] < 4:
+        raise ValueError("Unexpected label voxel-spacing metadata")
+    prediction = torch.sigmoid(logits) > 0.5
+    truth = labels > 0.5
+    results: list[float | None] = []
+    for index in range(labels.shape[0]):
+        if not prediction[index].any() or not truth[index].any():
+            results.append(None)
+            continue
+        value = compute_hausdorff_distance(
+            prediction[index : index + 1],
+            truth[index : index + 1],
+            include_background=True,
+            percentile=95,
+            spacing=spacing[index, 1:4].tolist(),
+        )
+        results.append(float(value.squeeze().detach().cpu()))
+    return results

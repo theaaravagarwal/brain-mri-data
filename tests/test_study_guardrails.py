@@ -39,3 +39,5 @@ class StudyGuardrailTests(unittest.TestCase):
             self.assertEqual(result["locked_test_cases"], 0)
             self.assertEqual(payload["evaluation_status"], "pilot_internal_only")
             self.assertEqual(payload["external_test"], [])
+            self.assertEqual(payload["study"]["training"]["architecture"], "monai_segresnet")
+            self.assertEqual(payload["study"]["training"]["init_filters"], 32)

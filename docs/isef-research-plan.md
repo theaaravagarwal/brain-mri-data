@@ -19,6 +19,11 @@ primary dependent variable is per-case external whole-lesion Dice; HD95,
 mask-derived box IoU, and clean-to-corrupted Dice retention are secondary
 outcomes.
 
+The locked configuration also fixes the SegResNet width, 100-epoch budget,
+optimizer, learning rate, weight decay, validation cadence, precision mode,
+PAMC loss weights, and hardware profile. The final-study runner rejects
+command-line overrides to these settings.
+
 BraTS 2020, UTSW-Glioma, and UCSF-PDGM are development sources only. BraTS-
 Africa is locked before training and is never used for preprocessing choices,
 hyperparameter selection, or early stopping. UPENN-GBM is excluded from the

@@ -2,9 +2,12 @@
 # Claim and run exactly one pre-registered CUDA glioma study job.
 set -euo pipefail
 
-ARM="${1:?usage: ./scripts/run_glioma_job.sh ARM SEED [EPOCHS]}"
-SEED="${2:?usage: ./scripts/run_glioma_job.sh ARM SEED [EPOCHS]}"
-EPOCHS="${3:-100}"
+if [[ $# -ne 2 ]]; then
+  echo "usage: ./scripts/run_glioma_job.sh ARM SEED" >&2
+  exit 2
+fi
+ARM="$1"
+SEED="$2"
 PROFILE="cuda"
 MATRIX="config/run-matrix/glioma.yaml"
 STUDY="data/manifests/glioma.locked.json"
@@ -27,4 +30,4 @@ fi
 .venv/bin/brain-mri-data runs claim "$MATRIX" "$RUN_ID" --profile "$PROFILE"
 exec .venv/bin/python training/train_glioma.py \
   --study "$STUDY" --data-root data --profile training/profiles/cuda.yaml \
-  --arm "$ARM" --seed "$SEED" --epochs "$EPOCHS" --output "$RUN"
+  --arm "$ARM" --seed "$SEED" --output "$RUN"

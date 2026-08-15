@@ -4,7 +4,9 @@ import unittest
 
 import torch
 
-from training.evaluation import box_iou_per_case, deterministic_mask_one_modality, dice_per_case
+from monai.data import MetaTensor
+
+from training.evaluation import box_iou_per_case, deterministic_mask_one_modality, dice_per_case, hd95_mm_per_case
 
 
 class EvaluationTests(unittest.TestCase):
@@ -22,3 +24,11 @@ class EvaluationTests(unittest.TestCase):
         labels[:, :, 1, 1, 1] = 1.0
         self.assertEqual(dice_per_case(logits, labels), [1.0])
         self.assertEqual(box_iou_per_case(logits, labels), [1.0])
+
+    def test_hd95_uses_nifti_spacing_and_does_not_hide_empty_prediction(self) -> None:
+        logits = torch.full((1, 1, 3, 3, 3), -20.0)
+        labels = MetaTensor(torch.zeros((1, 1, 3, 3, 3)), meta={"pixdim": torch.tensor([[1.0, 1.5, 2.0, 2.5]])})
+        logits[:, :, 1, 1, 1] = 20.0
+        labels[:, :, 1, 1, 1] = 1.0
+        self.assertEqual(hd95_mm_per_case(logits, labels), [0.0])
+        self.assertEqual(hd95_mm_per_case(torch.full_like(logits, -20.0), labels), [None])
