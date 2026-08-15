@@ -77,6 +77,19 @@ def load_profile(path: Path) -> dict[str, Any]:
     return profile
 
 
+def validate_profile_against_study(profile: dict[str, Any], study: dict[str, Any]) -> None:
+    """Reject a runtime profile that changes a locked scientific setting."""
+    locked = study["study"]
+    expected_patch = [int(value) for value in locked["study_patch_size"]]
+    actual_patch = [int(value) for value in profile["patch_size"]]
+    if actual_patch != expected_patch:
+        raise ValueError("Runtime profile patch_size must match the locked study")
+    if int(profile["effective_batch_size"]) != int(locked["effective_batch_size"]):
+        raise ValueError("Runtime profile effective_batch_size must match the locked study")
+    if profile["mixed_precision"] != locked["training"]["mixed_precision"]:
+        raise ValueError("Runtime profile mixed_precision must match the locked study")
+
+
 def set_seed(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
@@ -222,6 +235,7 @@ def main() -> None:
         raise ValueError("Locked study requests an unsupported training configuration")
     if args.init_filters != int(training["init_filters"]) or args.validation_interval != int(training["validation_interval"]):
         raise ValueError("Command-line model settings must match the locked study")
+    validate_profile_against_study(profile, study)
     if study["evaluation_status"] == "external_test_locked":
         if args.epochs != int(training.get("epochs", -1)):
             raise ValueError("External-study epoch budget must match the locked study")
@@ -249,6 +263,10 @@ def main() -> None:
 
     source_count = len(study["study"]["train_sources"])
     device = torch.device("cuda:0")
+    device_name = torch.cuda.get_device_name(device)
+    expected_gpu = str(profile.get("expected_gpu_name_contains", ""))
+    if expected_gpu and expected_gpu.lower() not in device_name.lower():
+        raise SystemExit(f"Runtime GPU {device_name!r} does not match profile expectation {expected_gpu!r}")
     model = PamcSegResNet(args.init_filters, source_count).to(device)
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -276,13 +294,14 @@ def main() -> None:
         "training_config": training,
         "trainer_sha256": file_sha256(Path(__file__)),
         "pamc_sha256": file_sha256(Path(__file__).with_name("pamc.py")),
+        "evaluation_sha256": file_sha256(Path(__file__).with_name("evaluation.py")),
         "git_revision": git_revision(),
         "python": platform.python_version(),
         "torch": torch.__version__,
         "hip": torch.version.hip,
         "cuda": torch.version.cuda,
         "hardware": {
-            "device_name": torch.cuda.get_device_name(device),
+            "device_name": device_name,
             "device_count": torch.cuda.device_count(),
             "total_memory_bytes": torch.cuda.get_device_properties(device).total_memory,
         },

@@ -83,10 +83,10 @@ measure runtime. Its validation score is **not** an external-test result and
 must not be used for final model selection claims.
 
 ```bash
-./scripts/train_amd_pilot.sh 1
+./scripts/train_cuda_pilot.sh 1
 ```
 
 The script creates `data/manifests/glioma.pilot.json` once and records output
-under `runs/glioma-pilot--amd--brats--20260812`. The full study remains blocked
+under `runs/glioma-pilot--cuda--brats--20260812`. The full study remains blocked
 until its independent external cohort, label mapping, and manual provenance
 review are ready.
