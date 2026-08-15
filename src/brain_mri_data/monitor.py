@@ -78,6 +78,13 @@ def _last_metric(run: Path | None) -> dict[str, Any] | None:
     return json.loads(metrics.read_text().splitlines()[-1])
 
 
+def _progress(run: Path | None) -> dict[str, Any] | None:
+    if run is None:
+        return None
+    path = run / "progress.json"
+    return json.loads(path.read_text()) if path.exists() and path.stat().st_size else None
+
+
 def snapshot(run: Path | None = None) -> dict[str, Any]:
     run = run or _active_run()
     record: dict[str, Any] = {}
@@ -93,6 +100,7 @@ def snapshot(run: Path | None = None) -> dict[str, Any]:
         "memory": _memory(),
         "processes": processes,
         "run_metadata": {key: record.get(key) for key in ("profile_id", "arm", "seed", "epochs", "hardware") if key in record},
+        "progress": _progress(run),
         "last_metric": _last_metric(run),
     }
 
@@ -113,6 +121,7 @@ def _panel(title: str, lines: list[str], width: int) -> list[str]:
 def render(data: dict[str, Any], color: bool = True) -> str:
     width = min(max(shutil.get_terminal_size((92, 30)).columns, 56), 118)
     metadata = data["run_metadata"]
+    progress = data["progress"] or {}
     title = "brain-mri-data  /  CUDA monitor"
     run_label = data["run"] or "No active CUDA run found"
     gpu = data["gpu"]
@@ -137,6 +146,18 @@ def render(data: dict[str, Any], color: bool = True) -> str:
         f"Profile: {metadata.get('profile_id', '—')}  ·  arm: {metadata.get('arm', '—')}  ·  seed: {metadata.get('seed', '—')}",
         f"RAM: {data['memory']['used_gib']:.1f} / {data['memory']['total_gib']:.1f} GiB  ·  trainer processes: {len(data['processes'])}",
     ]
+    if progress:
+        phase = str(progress.get("phase", "working")).replace("_", " ")
+        epoch = progress.get("epoch", "—")
+        epochs = progress.get("epochs", metadata.get("epochs", "—"))
+        if "batches_total" in progress:
+            done, total = int(progress.get("batches_complete", 0)), int(progress["batches_total"])
+            run_lines.append(f"{phase.title()}: epoch {epoch}/{epochs}  ·  batch {done}/{total} ({done / total:.0%})")
+            run_lines.append(f"Live loss: {float(progress.get('train_loss', float('nan'))):.4f}  ·  elapsed {float(progress.get('elapsed_seconds', 0)):.0f}s")
+        elif "cases_total" in progress:
+            run_lines.append(f"{phase.title()}: epoch {epoch}/{epochs}  ·  case {progress.get('cases_complete', 0)}/{progress['cases_total']}")
+        else:
+            run_lines.append(f"{phase.title()}: epoch {epoch}/{epochs}")
     heading = f"\x1b[1;36m{title}\x1b[0m" if color else title
     lines = [heading, f"Updated {data['captured_at_local']}  ·  r refresh  ·  q quit", ""]
     lines.extend(_panel("RUN", run_lines, width))

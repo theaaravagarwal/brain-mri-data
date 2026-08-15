@@ -168,3 +168,7 @@ brain-mri-data monitor
 brain-mri-data monitor --once
 brain-mri-data monitor --json --once
 ```
+
+For runs started after the live-progress update, the dashboard also shows the
+current training/validation phase, epoch, batch or case count, running loss,
+and elapsed epoch time. The training pane itself uses `tqdm` progress bars.

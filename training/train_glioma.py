@@ -6,15 +6,19 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import platform
 import random
 import subprocess
+import sys
+import time
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import torch
 import yaml
+from tqdm.auto import tqdm
 from monai.data import DataLoader, Dataset
 from monai.inferers import sliding_window_inference
 from monai.losses import DiceCELoss
@@ -174,6 +178,14 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def write_progress(path: Path, **values: Any) -> None:
+    """Atomically publish live run state for the terminal monitor."""
+    payload = {"schema_version": 1, "updated_at_unix": time.time(), **values}
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(payload, sort_keys=True) + "\n")
+    os.replace(temporary, path)
+
+
 def git_revision() -> str:
     try:
         return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
@@ -187,11 +199,17 @@ def evaluate(
     device: torch.device,
     patch_size: tuple[int, int, int],
     corruption_seed: int | None = None,
+    progress_path: Path | None = None,
+    progress_fields: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     per_case: list[dict[str, Any]] = []
     model.eval()
     with torch.inference_mode():
-        for batch in data:
+        iterator = tqdm(
+            data, total=len(data), desc=(progress_fields or {}).get("phase", "evaluate"),
+            unit="case", dynamic_ncols=True, disable=not sys.stderr.isatty(), leave=False,
+        )
+        for case_number, batch in enumerate(iterator, start=1):
             image = batch["image"].to(device)
             case_ids = [str(case_id) for case_id in batch["case_id"]]
             masked_modalities: list[str | None] = [None] * len(case_ids)
@@ -210,6 +228,13 @@ def evaluate(
                 "hd95_mm": hd95_score,
                 **({"masked_modality": modality} if modality is not None else {}),
             } for case_id, score, box_score, hd95_score, modality in zip(case_ids, dice, box_iou, hd95, masked_modalities, strict=True))
+            if progress_path is not None:
+                write_progress(
+                    progress_path,
+                    **(progress_fields or {}),
+                    cases_complete=case_number,
+                    cases_total=len(data),
+                )
     if not per_case:
         raise ValueError("Evaluation loader yielded no cases")
     return {
@@ -312,13 +337,19 @@ def main() -> None:
         },
     }
     (args.output / "run.json").write_text(json.dumps(run, indent=2, sort_keys=True) + "\n")
+    progress_path = args.output / "progress.json"
 
     best_dice = float("-inf")
     for epoch in range(1, args.epochs + 1):
         model.train()
         optimizer.zero_grad(set_to_none=True)
         losses = []
-        for step, batch in enumerate(train_loader, start=1):
+        epoch_started = time.monotonic()
+        train_iterator = tqdm(
+            train_loader, total=len(train_loader), desc=f"train {epoch}/{args.epochs}",
+            unit="batch", dynamic_ncols=True, disable=not sys.stderr.isatty(), leave=True,
+        )
+        for step, batch in enumerate(train_iterator, start=1):
             image, label = batch["image"].to(device), batch["label"].to(device)
             with torch.amp.autocast("cuda", dtype=torch.float16):
                 logits, domain_logits = model(image, 1.0 if args.arm == "pamc" else 0.0)
@@ -334,16 +365,41 @@ def main() -> None:
             if step % accumulation == 0:
                 scaler.step(optimizer); scaler.update(); optimizer.zero_grad(set_to_none=True)
             losses.append(loss.item() * accumulation)
+            mean_loss = float(np.mean(losses))
+            train_iterator.set_postfix(loss=f"{mean_loss:.4f}")
+            write_progress(
+                progress_path,
+                phase="training",
+                epoch=epoch,
+                epochs=args.epochs,
+                batches_complete=step,
+                batches_total=len(train_loader),
+                train_loss=mean_loss,
+                elapsed_seconds=round(time.monotonic() - epoch_started, 1),
+            )
         if len(losses) % accumulation:
             scaler.step(optimizer); scaler.update(); optimizer.zero_grad(set_to_none=True)
         report: dict[str, Any] = {"epoch": epoch, "train_loss": float(np.mean(losses))}
         if epoch % args.validation_interval == 0:
-            report["validation"] = evaluate(model, val_loader, device, patch_size)
+            report["validation"] = evaluate(
+                model, val_loader, device, patch_size,
+                progress_path=progress_path,
+                progress_fields={"phase": "validation", "epoch": epoch, "epochs": args.epochs},
+            )
             if report["validation"]["mean_dice"] > best_dice:
                 best_dice = report["validation"]["mean_dice"]
                 torch.save({"epoch": epoch, "model": model.state_dict(), "report": report}, args.output / "best.pt")
         with (args.output / "metrics.jsonl").open("a") as stream:
             stream.write(json.dumps(report, sort_keys=True) + "\n")
+        write_progress(
+            progress_path,
+            phase="epoch_complete",
+            epoch=epoch,
+            epochs=args.epochs,
+            train_loss=report["train_loss"],
+            validation_dice=report.get("validation", {}).get("mean_dice"),
+            elapsed_seconds=round(time.monotonic() - epoch_started, 1),
+        )
 
     checkpoint = torch.load(args.output / "best.pt", map_location=device, weights_only=True)
     model.load_state_dict(checkpoint["model"])
@@ -352,10 +408,17 @@ def main() -> None:
         final["external_evaluation"] = "not_run: pilot_internal_only"
     else:
         final.update({
-            "external_clean": evaluate(model, external_loader, device, patch_size),
-            "external_one_modality_masked": evaluate(model, external_loader, device, patch_size, corruption_seed=args.seed),
+            "external_clean": evaluate(
+                model, external_loader, device, patch_size, progress_path=progress_path,
+                progress_fields={"phase": "external_clean", "epoch": args.epochs, "epochs": args.epochs},
+            ),
+            "external_one_modality_masked": evaluate(
+                model, external_loader, device, patch_size, corruption_seed=args.seed, progress_path=progress_path,
+                progress_fields={"phase": "external_masked", "epoch": args.epochs, "epochs": args.epochs},
+            ),
         })
     (args.output / "external.json").write_text(json.dumps(final, indent=2, sort_keys=True) + "\n")
+    write_progress(progress_path, phase="complete", epoch=args.epochs, epochs=args.epochs)
 
 
 if __name__ == "__main__":

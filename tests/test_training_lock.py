@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import unittest
+import json
+import tempfile
+from pathlib import Path
 
-from training.train_glioma import validate_cnn_accelerator, validate_profile_against_study
+from training.train_glioma import validate_cnn_accelerator, validate_profile_against_study, write_progress
 
 
 class TrainingLockTests(unittest.TestCase):
@@ -35,3 +38,12 @@ class TrainingLockTests(unittest.TestCase):
             validate_cnn_accelerator({"accelerator": "amd"}, "7.2")
         with self.assertRaisesRegex(ValueError, "CUDA PyTorch"):
             validate_cnn_accelerator({"accelerator": "cuda"}, "7.2")
+
+    def test_live_progress_is_valid_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "progress.json"
+            write_progress(path, phase="training", epoch=1, batches_complete=3)
+            payload = json.loads(path.read_text())
+            self.assertEqual(payload["phase"], "training")
+            self.assertEqual(payload["batches_complete"], 3)
+            self.assertEqual(payload["schema_version"], 1)

@@ -21,6 +21,11 @@ class MonitorTests(unittest.TestCase):
                 "epoch": 1, "train_loss": 0.5,
                 "validation": {"mean_dice": 0.7, "mean_derived_box_iou": 0.6, "mean_hd95_mm": 8.0},
             }) + "\n")
+            (run / "progress.json").write_text(json.dumps({
+                "phase": "training", "epoch": 2, "epochs": 10,
+                "batches_complete": 4, "batches_total": 10, "train_loss": 0.4,
+                "elapsed_seconds": 5,
+            }))
             with patch("brain_mri_data.monitor._gpu", return_value={
                 "name": "NVIDIA GeForce RTX 3060", "utilization": "99", "memory_used": "4000",
                 "memory_total": "12288", "temperature": "60", "power": "120",
@@ -33,4 +38,5 @@ class MonitorTests(unittest.TestCase):
             output = render(data, color=False)
             self.assertIn("CUDA monitor", output)
             self.assertIn("Validation Dice 0.7000", output)
+            self.assertIn("batch 4/10 (40%)", output)
             self.assertNotIn("\x1b[", output)
