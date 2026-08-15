@@ -5,6 +5,7 @@ EPOCHS="${1:-1}"
 SEED="${2:-20260813}"
 STUDY="data/manifests/glioma.pilot.json"
 RUN="runs/glioma-pilot--cuda--brats--${SEED}"
+RUN+="${RUN_SUFFIX:-}"
 
 if [[ ! -x .venv/bin/brain-mri-data || ! -x .venv/bin/python ]]; then
   echo "Run: uv sync --extra cuda" >&2

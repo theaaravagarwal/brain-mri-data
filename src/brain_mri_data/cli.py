@@ -12,6 +12,8 @@ from .qc import validate_cases
 from .splits import make_split
 from .study import build_study_manifest
 from .run_matrix import claim_run, expand_matrix
+from .language_bench import score_evidence, score_structured
+from .language_gateway import build_explainer_prompt, load_language_policy, validate_result_envelope
 
 
 def paths(args: argparse.Namespace) -> tuple[Path, Path]:
@@ -48,6 +50,18 @@ def main() -> None:
     run_claim = run_sub.add_parser("claim")
     run_claim.add_argument("matrix_config"); run_claim.add_argument("run_id")
     run_claim.add_argument("--profile", required=True)
+    language = sub.add_parser("language")
+    language_sub = language.add_subparsers(dest="language_command", required=True)
+    language_policy = language_sub.add_parser("policy")
+    language_policy.add_argument("--config", default="config/language.yaml")
+    language_validate = language_sub.add_parser("validate")
+    language_validate.add_argument("result")
+    language_prompt = language_sub.add_parser("prompt")
+    language_prompt.add_argument("result")
+    language_score = language_sub.add_parser("score")
+    language_score.add_argument("kind", choices=("structured", "evidence"))
+    language_score.add_argument("fixtures")
+    language_score.add_argument("responses")
     args = parser.parse_args()
     catalog = load_catalog()
     raw_root, manifest_root = paths(args)
@@ -80,6 +94,16 @@ def main() -> None:
             print(json.dumps(expand_matrix(matrix_path), indent=2, sort_keys=True)); return
         report = claim_run(matrix_path, args.run_id, args.profile, data_root / "experiments")
         print(json.dumps(report, indent=2, sort_keys=True)); return
+    if args.command == "language":
+        if args.language_command == "policy":
+            print(json.dumps(load_language_policy(Path(args.config)), indent=2, sort_keys=True)); return
+        payload = json.loads(Path(args.result).read_text()) if args.language_command in {"validate", "prompt"} else None
+        if args.language_command == "validate":
+            print(json.dumps(validate_result_envelope(payload), indent=2, sort_keys=True)); return
+        if args.language_command == "prompt":
+            print(build_explainer_prompt(payload)); return
+        scorer = score_structured if args.kind == "structured" else score_evidence
+        print(json.dumps(scorer(Path(args.fixtures), Path(args.responses)), indent=2, sort_keys=True)); return
     source = get_source(args.source_id, catalog)
     if args.command == "fetch":
         print(fetch_source(args.source_id, source, raw_root, args.dry_run)); return

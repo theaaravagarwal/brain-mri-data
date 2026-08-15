@@ -1,0 +1,12 @@
+schema_version: 1
+roles:
+  planner:
+    model: qwen3-coder:30b
+    allowed_tools: [list_runs, read_run, propose_preapproved_job]
+  explainer:
+    model: qwen3:14b
+    allowed_tools: [read_validated_result, search_evidence]
+safety:
+  allowed_protocols: [glioma_4seq_v1]
+  forbidden_capabilities: [raw_image_access, model_routing, diagnosis, treatment, patient_specific_advice]
+  required_disclaimer: Research output only; not a diagnosis or treatment recommendation.

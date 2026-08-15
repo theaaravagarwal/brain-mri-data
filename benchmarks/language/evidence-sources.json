@@ -1,0 +1,4 @@
+{
+  "protocol-contract": "The adult-glioma research protocol requires exactly T1, T1ce, T2, and FLAIR MRI sequences.",
+  "safety-policy": "The language layer is research output only. It may not diagnose, recommend treatment, select a medical model, or inspect raw images."
+}
