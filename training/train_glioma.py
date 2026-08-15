@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import platform
 import random
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -32,8 +34,10 @@ from monai.transforms import (
 from brain_mri_data.indexer import resolve_case_path
 if __package__:
     from .pamc import PamcSegResNet, mask_one_modality, modality_consistency_loss
+    from .evaluation import box_iou_per_case, deterministic_mask_one_modality, dice_per_case
 else:
     from pamc import PamcSegResNet, mask_one_modality, modality_consistency_loss
+    from evaluation import box_iou_per_case, deterministic_mask_one_modality, dice_per_case
 
 
 MODALITY_ORDER = ("t1", "t1ce", "t2", "flair")
@@ -141,26 +145,55 @@ def loader(items: list[dict[str, Any]], transforms: Compose, profile: dict[str, 
     return DataLoader(Dataset(items, transforms), batch_size=1, shuffle=shuffle, **options)
 
 
-def dice_score(logits: torch.Tensor, labels: torch.Tensor) -> list[float]:
-    prediction = torch.sigmoid(logits) > 0.5
-    truth = labels > 0.5
-    numerator = 2 * (prediction & truth).sum(dim=(1, 2, 3, 4)).float()
-    denominator = prediction.sum(dim=(1, 2, 3, 4)).float() + truth.sum(dim=(1, 2, 3, 4)).float()
-    return ((numerator + 1e-6) / (denominator + 1e-6)).detach().cpu().tolist()
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
-def evaluate(model: PamcSegResNet, data: DataLoader, device: torch.device, patch_size: tuple[int, int, int], corrupt: bool) -> dict[str, Any]:
-    scores: list[float] = []
+def git_revision() -> str:
+    try:
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "unavailable"
+
+
+def evaluate(
+    model: PamcSegResNet,
+    data: DataLoader,
+    device: torch.device,
+    patch_size: tuple[int, int, int],
+    corruption_seed: int | None = None,
+) -> dict[str, Any]:
+    per_case: list[dict[str, Any]] = []
     model.eval()
     with torch.inference_mode():
         for batch in data:
             image = batch["image"].to(device)
-            if corrupt:
-                image, _ = mask_one_modality(image, 1.0)
+            case_ids = [str(case_id) for case_id in batch["case_id"]]
+            masked_modalities: list[str | None] = [None] * len(case_ids)
+            if corruption_seed is not None:
+                image, masked_modalities = deterministic_mask_one_modality(image, case_ids, corruption_seed)
             with torch.amp.autocast("cuda", dtype=torch.float16):
                 logits = sliding_window_inference(image, patch_size, 1, lambda values: model(values)[0], overlap=0.5)
-            scores.extend(dice_score(logits, batch["label"].to(device)))
-    return {"mean_dice": float(np.mean(scores)), "per_case_dice": scores}
+            labels = batch["label"].to(device)
+            dice = dice_per_case(logits, labels)
+            box_iou = box_iou_per_case(logits, labels)
+            per_case.extend({
+                "case_id": case_id,
+                "whole_lesion_dice": score,
+                "derived_box_iou": box_score,
+                **({"masked_modality": modality} if modality is not None else {}),
+            } for case_id, score, box_score, modality in zip(case_ids, dice, box_iou, masked_modalities, strict=True))
+    if not per_case:
+        raise ValueError("Evaluation loader yielded no cases")
+    return {
+        "mean_dice": float(np.mean([item["whole_lesion_dice"] for item in per_case])),
+        "mean_derived_box_iou": float(np.mean([item["derived_box_iou"] for item in per_case])),
+        "per_case": per_case,
+    }
 
 
 def main() -> None:
@@ -208,11 +241,28 @@ def main() -> None:
     settings = study["study"].get("method", {}).get("pamc", {})
     accumulation = int(profile["effective_batch_size"])
     args.output.mkdir(parents=True, exist_ok=True)
-    (args.output / "run.json").write_text(json.dumps({
-        "study": str(args.study.resolve()), "profile": profile, "arm": args.arm,
-        "seed": args.seed, "python": platform.python_version(), "torch": torch.__version__,
-        "hip": torch.version.hip, "cuda": torch.version.cuda,
-    }, indent=2, sort_keys=True) + "\n")
+    run = {
+        "schema_version": 1,
+        "study_id": study["study"]["study_id"],
+        "evaluation_status": study["evaluation_status"],
+        "study": str(args.study.resolve()),
+        "study_sha256": file_sha256(args.study),
+        "profile": profile,
+        "profile_id": profile["profile_id"],
+        "profile_sha256": file_sha256(args.profile),
+        "arm": args.arm,
+        "seed": args.seed,
+        "epochs": args.epochs,
+        "init_filters": args.init_filters,
+        "trainer_sha256": file_sha256(Path(__file__)),
+        "pamc_sha256": file_sha256(Path(__file__).with_name("pamc.py")),
+        "git_revision": git_revision(),
+        "python": platform.python_version(),
+        "torch": torch.__version__,
+        "hip": torch.version.hip,
+        "cuda": torch.version.cuda,
+    }
+    (args.output / "run.json").write_text(json.dumps(run, indent=2, sort_keys=True) + "\n")
 
     best_dice = float("-inf")
     for epoch in range(1, args.epochs + 1):
@@ -239,7 +289,7 @@ def main() -> None:
             scaler.step(optimizer); scaler.update(); optimizer.zero_grad(set_to_none=True)
         report: dict[str, Any] = {"epoch": epoch, "train_loss": float(np.mean(losses))}
         if epoch % args.validation_interval == 0:
-            report["validation"] = evaluate(model, val_loader, device, patch_size, corrupt=False)
+            report["validation"] = evaluate(model, val_loader, device, patch_size)
             if report["validation"]["mean_dice"] > best_dice:
                 best_dice = report["validation"]["mean_dice"]
                 torch.save({"epoch": epoch, "model": model.state_dict(), "report": report}, args.output / "best.pt")
@@ -248,13 +298,13 @@ def main() -> None:
 
     checkpoint = torch.load(args.output / "best.pt", map_location=device, weights_only=True)
     model.load_state_dict(checkpoint["model"])
-    final: dict[str, Any] = {"checkpoint_epoch": checkpoint["epoch"]}
+    final: dict[str, Any] = {"schema_version": 1, "run": run, "checkpoint_epoch": checkpoint["epoch"], "checkpoint_sha256": file_sha256(args.output / "best.pt")}
     if external_loader is None:
         final["external_evaluation"] = "not_run: pilot_internal_only"
     else:
         final.update({
-            "external_clean": evaluate(model, external_loader, device, patch_size, corrupt=False),
-            "external_one_modality_masked": evaluate(model, external_loader, device, patch_size, corrupt=True),
+            "external_clean": evaluate(model, external_loader, device, patch_size),
+            "external_one_modality_masked": evaluate(model, external_loader, device, patch_size, corruption_seed=args.seed),
         })
     (args.output / "external.json").write_text(json.dumps(final, indent=2, sort_keys=True) + "\n")
 

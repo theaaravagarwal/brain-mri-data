@@ -30,8 +30,40 @@ resolved by a documented audit.
 Every case must have all four required sequences, a reviewed canonical
 whole-lesion mapping, passing geometry QC, source file hashes, and a frozen
 study manifest. The primary comparison uses paired patient-level bootstrap
-confidence intervals and a paired permutation test; results from CUDA and ROCm
-are reported separately.
+confidence intervals and a paired permutation test. CNN results are produced
+only by the fixed CUDA worker; the AMD worker is reserved for the separately
+evaluated constrained language benchmarks. The frozen comparison plan is
+`config/analysis/glioma.yaml`. Each external artifact stores source-qualified
+case IDs, case-level Dice, and mask-derived box IoU. Controlled corruption
+masks a deterministic modality selected from `(study seed, case ID)`, so it is
+the same on every rerun and independent of loader order.
+
+After all pre-registered seeds for a worker have finished, write the immutable
+analysis artifact rather than calculating results in a notebook:
+
+```bash
+brain-mri-data analyze-study config/analysis/glioma.yaml \
+  runs/glioma--cuda--brats--20260812/external.json \
+  runs/glioma--cuda--brats--20260813/external.json \
+  runs/glioma--cuda--brats--20260814/external.json \
+  runs/glioma--cuda--pooled--20260812/external.json \
+  runs/glioma--cuda--pooled--20260813/external.json \
+  runs/glioma--cuda--pooled--20260814/external.json \
+  runs/glioma--cuda--pamc--20260812/external.json \
+  runs/glioma--cuda--pamc--20260813/external.json \
+  runs/glioma--cuda--pamc--20260814/external.json \
+  --output analyses/glioma-cuda.json
+```
+
+The command rejects an incomplete seed set, duplicate run, changed external
+case set, or a pre-existing analysis artifact.
+
+Each registered CUDA job is claimed before launch, so a rerun cannot silently
+replace evidence:
+
+```bash
+./scripts/run_glioma_job.sh pamc 20260812
+```
 
 This is retrospective research on public, de-identified data. It collects no
 new participant data, makes no diagnoses or treatment recommendations, and

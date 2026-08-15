@@ -11,6 +11,7 @@ from .indexer import discover_source, index_source, read_jsonl, resolve_case_pat
 from .qc import validate_cases
 from .splits import make_split
 from .study import build_study_manifest
+from .study_analysis import analyze_study
 from .run_matrix import claim_run, expand_matrix
 from .language_bench import score_evidence, score_structured
 from .language_gateway import build_explainer_prompt, load_language_policy, validate_job_proposal, validate_result_envelope
@@ -44,6 +45,10 @@ def main() -> None:
     study = sub.add_parser("build-study")
     study.add_argument("study_config")
     study.add_argument("--output", required=True, help="destination under the manifest root")
+    analyze = sub.add_parser("analyze-study", help="run the frozen paired external-study analysis")
+    analyze.add_argument("analysis_plan")
+    analyze.add_argument("results", nargs="+", help="external.json artifacts from completed frozen runs")
+    analyze.add_argument("--output", required=True)
     runs = sub.add_parser("runs")
     run_sub = runs.add_subparsers(dest="runs_command", required=True)
     run_list = run_sub.add_parser("list"); run_list.add_argument("matrix_config")
@@ -90,6 +95,15 @@ def main() -> None:
         if output.is_absolute() or ".." in output.parts:
             parser.error("--output must be a path relative to the manifest root")
         report = build_study_manifest(catalog, Path(args.study_config), manifest_root, manifest_root / output)
+        print(json.dumps(report, indent=2, sort_keys=True)); return
+    if args.command == "analyze-study":
+        output = Path(args.output)
+        if output.is_absolute() or ".." in output.parts:
+            parser.error("--output must be a path relative to the data root")
+        try:
+            report = analyze_study(Path(args.analysis_plan), [Path(path) for path in args.results], data_root / output)
+        except (FileExistsError, ValueError) as error:
+            parser.error(str(error))
         print(json.dumps(report, indent=2, sort_keys=True)); return
     if args.command == "runs":
         matrix_path = Path(args.matrix_config)

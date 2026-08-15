@@ -14,8 +14,8 @@ MATRIX = ROOT / "config" / "run-matrix" / "glioma.yaml"
 class RunMatrixTests(unittest.TestCase):
     def test_matrix_expands_each_profile_arm_and_seed(self) -> None:
         jobs = expand_matrix(MATRIX)
-        self.assertEqual(len(jobs), 18)
-        self.assertEqual(len({job["run_id"] for job in jobs}), 18)
+        self.assertEqual(len(jobs), 9)
+        self.assertEqual(len({job["run_id"] for job in jobs}), 9)
 
     def test_claim_is_profile_bound_and_immutable(self) -> None:
         job = expand_matrix(MATRIX)[0]

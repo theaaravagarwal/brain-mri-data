@@ -24,12 +24,14 @@ training as the primary external test set.
 | Worker | Runtime preset | Settings |
 | --- | --- | --- |
 | NVIDIA RTX 3060, 12 GB VRAM | `cuda` | CUDA FP16, two loader workers, 80^3 patch |
-| AMD RX 7900 XTX, CPU-limited | `amd` | ROCm FP16, one loader worker, low prefetch, 80^3 patch |
+| AMD RX 7900 XTX, CPU-limited host | language only | bounded, structured-output/evidence benchmarks after GPU verification |
 
-Workers train independent `(arm, seed)` jobs; CUDA and ROCm are not combined in
-distributed training. The controller locks manifests and claims, while each
-worker retains its own legal local raw-data copy. Synchronize only configs,
-metrics, checkpoints, and non-identifying prediction artifacts over Tailscale.
+The RTX 3060 trains every frozen CNN `(arm, seed)` job. The AMD worker must not
+run CNN study arms: it is reserved for the separately evaluated, constrained
+research-language layer and never accesses images or clinical decisions. The
+controller locks manifests and claims, while workers retain their own legal
+local raw-data copy. Synchronize only configs, metrics, checkpoints, and
+non-identifying prediction artifacts over Tailscale.
 
 The importer environment has no training framework. Use `uv sync --extra cuda`
 or `uv sync --extra amd` in a separate Python 3.12 environment, never both.
