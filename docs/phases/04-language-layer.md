@@ -1,6 +1,9 @@
 # Phase 04 — constrained language layer
 
-Status: aggregate research-summary pipeline implementation; language results remain separate from CNN claims.
+Status: aggregate research-summary pipeline passed its internal review gates;
+language results remain separate from CNN claims. See
+`analyses/language/language-pipeline-review-20260816.md` for hashes, test
+results, residual operational work, and the human-review boundary.
 
 ## Aggregate CNN-to-language boundary
 
