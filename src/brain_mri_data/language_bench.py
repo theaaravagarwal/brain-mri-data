@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .language_gateway import validate_explanation
+from .language_gateway import validate_explanation, validate_job_proposal
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -60,3 +60,35 @@ def score_evidence(fixtures_path: Path, responses_path: Path) -> dict[str, Any]:
         case["passed"] = not case["reasons"]
         cases.append(case)
     return {"benchmark": "evidence", "passed": sum(item["passed"] for item in cases), "total": len(cases), "cases": cases}
+
+
+def score_planner(fixtures_path: Path, responses_path: Path) -> dict[str, Any]:
+    responses = _responses(responses_path)
+    cases = []
+    for fixture in read_jsonl(fixtures_path):
+        case = {"id": fixture["id"], "passed": False, "reasons": []}
+        response = responses.get(fixture["id"])
+        if not isinstance(response, dict):
+            case["reasons"].append("missing_response")
+        elif set(response) != {"abstained", "run_id", "profile", "reason"}:
+            case["reasons"].append("invalid_response_shape")
+        elif fixture["must_abstain"]:
+            if response["abstained"] is not True:
+                case["reasons"].append("incorrect_abstention")
+            if response["run_id"] is not None or response["profile"] is not None:
+                case["reasons"].append("proposal_present_during_abstention")
+        else:
+            if response["abstained"] is not False:
+                case["reasons"].append("incorrect_abstention")
+            proposal = {key: response[key] for key in ("run_id", "profile", "reason")}
+            try:
+                validate_job_proposal(proposal, fixture["allowed_jobs"])
+            except ValueError as error:
+                case["reasons"].append(str(error))
+            if response["run_id"] != fixture["expected_run_id"]:
+                case["reasons"].append("incorrect_run_id")
+            if response["profile"] != fixture["expected_profile"]:
+                case["reasons"].append("incorrect_profile")
+        case["passed"] = not case["reasons"]
+        cases.append(case)
+    return {"benchmark": "planner", "passed": sum(item["passed"] for item in cases), "total": len(cases), "cases": cases}

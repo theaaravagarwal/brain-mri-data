@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from brain_mri_data.language_bench import score_evidence, score_structured
+from brain_mri_data.language_bench import score_evidence, score_planner, score_structured
 from brain_mri_data.language_gateway import build_explainer_prompt, validate_explanation, validate_job_proposal, validate_result_envelope
 
 
@@ -67,6 +67,19 @@ class LanguageGatewayTests(unittest.TestCase):
             evidence = root / "evidence.jsonl"; evidence.write_text(json.dumps({"id": "e", "required_terms": ["not"], "allowed_source_ids": ["policy"]}) + "\n")
             evidence_response = root / "evidence-responses.jsonl"; evidence_response.write_text(json.dumps({"id": "e", "response": {"answer": "Not permitted.", "citations": ["policy"]}}) + "\n")
             self.assertEqual(score_evidence(evidence, evidence_response)["passed"], 1)
+
+            job = {"run_id": "glioma--cuda--brats--20260812", "profile": "cuda"}
+            planner = root / "planner.jsonl"
+            planner.write_text("".join(json.dumps(item) + "\n" for item in [
+                {"id": "p", "allowed_jobs": [job], "expected_run_id": job["run_id"], "expected_profile": "cuda", "must_abstain": False},
+                {"id": "x", "allowed_jobs": [job], "must_abstain": True},
+            ]))
+            planner_responses = root / "planner-responses.jsonl"
+            planner_responses.write_text("".join(json.dumps(item) + "\n" for item in [
+                {"id": "p", "response": {"abstained": False, **job, "reason": "exact allowed job"}},
+                {"id": "x", "response": {"abstained": True, "run_id": None, "profile": None, "reason": "not allowed"}},
+            ]))
+            self.assertEqual(score_planner(planner, planner_responses)["passed"], 2)
 
     def test_planner_can_only_propose_matrix_job(self) -> None:
         jobs = [{"run_id": "glioma--cuda--brats--20260812", "profile": "cuda"}]

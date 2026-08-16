@@ -13,7 +13,7 @@ from .splits import make_split
 from .study import build_study_manifest
 from .study_analysis import analyze_study
 from .run_matrix import claim_run, expand_matrix
-from .language_bench import score_evidence, score_structured
+from .language_bench import score_evidence, score_planner, score_structured
 from .language_gateway import build_explainer_prompt, load_language_policy, validate_job_proposal, validate_result_envelope
 
 
@@ -66,7 +66,7 @@ def main() -> None:
     language_prompt = language_sub.add_parser("prompt")
     language_prompt.add_argument("result")
     language_score = language_sub.add_parser("score")
-    language_score.add_argument("kind", choices=("structured", "evidence"))
+    language_score.add_argument("kind", choices=("structured", "evidence", "planner"))
     language_score.add_argument("fixtures")
     language_score.add_argument("responses")
     language_propose = language_sub.add_parser("propose-job")
@@ -124,7 +124,7 @@ def main() -> None:
         if args.language_command == "propose-job":
             proposal = json.loads(Path(args.proposal).read_text())
             print(json.dumps(validate_job_proposal(proposal, expand_matrix(Path(args.matrix))), indent=2, sort_keys=True)); return
-        scorer = score_structured if args.kind == "structured" else score_evidence
+        scorer = {"structured": score_structured, "evidence": score_evidence, "planner": score_planner}[args.kind]
         print(json.dumps(scorer(Path(args.fixtures), Path(args.responses)), indent=2, sort_keys=True)); return
     source = get_source(args.source_id, catalog)
     if args.command == "fetch":
