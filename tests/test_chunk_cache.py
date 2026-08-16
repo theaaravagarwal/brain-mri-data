@@ -61,6 +61,29 @@ class ChunkCacheTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "fingerprint|do not match"):
             load_cache_records(manifest, [{"case_id": "different"}], (5, 4, 5))
 
+    def test_foreground_sampler_always_contains_an_indexed_positive_chunk(self) -> None:
+        values = np.zeros((5, 80, 80, 80), dtype=np.float32)
+        values[4, 65, 65, 65] = 1
+        cache = self.root / "foreground.npy"
+        np.save(cache, to_chunk_major(values, 20), allow_pickle=False)
+        record = {
+            "cache": str(cache),
+            "shape": (80, 80, 80),
+            "case_id": "foreground",
+            "positive_chunks": [(3, 3, 3)],
+        }
+        transform = LoadChunkPatchd((40, 40, 40), 20, foreground_probability=1.0)
+        transform.set_random_state(seed=23)
+        for _ in range(10):
+            result = transform(record)
+            self.assertGreater(result["label"].sum(), 0)
+            self.assertNotIn("positive_chunks", result)
+
+    def test_foreground_sampler_requires_an_index(self) -> None:
+        transform = LoadChunkPatchd((5, 4, 5), 4, foreground_probability=0.5)
+        with self.assertRaisesRegex(ValueError, "positive-chunk index"):
+            transform({"cache": str(self.cache), "shape": (7, 8, 9), "case_id": "case"})
+
 
 if __name__ == "__main__":
     unittest.main()

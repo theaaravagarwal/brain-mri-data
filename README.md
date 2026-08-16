@@ -39,7 +39,8 @@ it must not run frozen CNN study arms.
 
 See [the AMD ROCm setup guide](docs/amd-rocm-setup.md) and
 [the NVIDIA CUDA setup guide](docs/cuda-setup.md) for host checks and
-verification.
+verification. The canonical SSH targets, repository paths, workload roles, and
+restart safety rules are recorded in [the compute-host runbook](docs/compute-hosts.md).
 
 Kaggle access requires `~/.kaggle/kaggle.json` or `KAGGLE_*` credentials.
 Hugging Face access requires `huggingface-cli login` for gated repos.

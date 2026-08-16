@@ -5,7 +5,12 @@ import json
 import tempfile
 from pathlib import Path
 
-from training.train_glioma import validate_cnn_accelerator, validate_profile_against_study, write_progress
+from training.train_glioma import (
+    training_patch_sampling,
+    validate_cnn_accelerator,
+    validate_profile_against_study,
+    write_progress,
+)
 
 
 class TrainingLockTests(unittest.TestCase):
@@ -58,3 +63,22 @@ class TrainingLockTests(unittest.TestCase):
             self.assertEqual(payload["phase"], "training")
             self.assertEqual(payload["batches_complete"], 3)
             self.assertEqual(payload["schema_version"], 1)
+
+    def test_patch_sampling_is_study_locked_and_validated(self) -> None:
+        self.assertEqual(training_patch_sampling(self.study)["foreground_probability"], 0.0)
+        foreground = {
+            "study": {
+                **self.study["study"],
+                "training": {
+                    "mixed_precision": "fp16",
+                    "patch_sampling": {
+                        "strategy": "foreground_chunk_mixture_v1",
+                        "foreground_probability": 0.5,
+                    },
+                },
+            }
+        }
+        self.assertEqual(training_patch_sampling(foreground)["foreground_probability"], 0.5)
+        foreground["study"]["training"]["patch_sampling"]["foreground_probability"] = 1.5
+        with self.assertRaisesRegex(ValueError, "probability"):
+            training_patch_sampling(foreground)

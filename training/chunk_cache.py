@@ -131,22 +131,67 @@ def load_cache_records(
         expected_grid = tuple((dimension + chunk_size - 1) // chunk_size for dimension in shape)
         if array.shape[:3] != expected_grid:
             raise ValueError(f"Training cache grid does not match its declared shape: {path}")
-        records.append({"cache": str(path), "shape": shape, "case_id": case_id})
+        positive_chunks = entry.get("positive_chunks")
+        if positive_chunks is not None:
+            if not isinstance(positive_chunks, list) or not positive_chunks:
+                raise ValueError(f"Foreground cache index is empty: {case_id}")
+            normalized_chunks = []
+            for chunk in positive_chunks:
+                if not isinstance(chunk, list) or len(chunk) != 3:
+                    raise ValueError(f"Invalid foreground chunk index: {case_id}")
+                normalized = tuple(int(value) for value in chunk)
+                if any(value < 0 or value >= expected_grid[index] for index, value in enumerate(normalized)):
+                    raise ValueError(f"Foreground chunk index is outside the cache grid: {case_id}")
+                normalized_chunks.append(normalized)
+            positive_chunks = normalized_chunks
+        records.append({
+            "cache": str(path),
+            "shape": shape,
+            "case_id": case_id,
+            **({"positive_chunks": positive_chunks} if positive_chunks is not None else {}),
+        })
     return records, payload
 
 
 class LoadChunkPatchd(RandomizableTransform, MapTransform):
-    """Uniformly sample a locked-size patch directly from chunk-major storage."""
+    """Sample a locked-size patch directly from chunk-major storage."""
 
-    def __init__(self, roi_size: Sequence[int], chunk_size: int) -> None:
+    def __init__(
+        self,
+        roi_size: Sequence[int],
+        chunk_size: int,
+        foreground_probability: float = 0.0,
+    ) -> None:
         RandomizableTransform.__init__(self, prob=1.0)
         MapTransform.__init__(self, keys=("cache",))
         self.roi_size = tuple(int(value) for value in roi_size)
         self.chunk_size = int(chunk_size)
+        self.foreground_probability = float(foreground_probability)
+        if not 0.0 <= self.foreground_probability <= 1.0:
+            raise ValueError("foreground_probability must be between zero and one")
         self.starts = (0, 0, 0)
 
-    def randomize(self, shape: Sequence[int]) -> None:
+    def randomize(
+        self,
+        shape: Sequence[int],
+        positive_chunks: Sequence[Sequence[int]] | None = None,
+    ) -> None:
         super().randomize(None)
+        if self.foreground_probability and not positive_chunks:
+            raise ValueError("Foreground sampling requires a non-empty positive-chunk index")
+        if positive_chunks and self.R.random_sample() < self.foreground_probability:
+            selected = positive_chunks[int(self.R.randint(0, len(positive_chunks)))]
+            starts = []
+            for dimension, roi, chunk_index in zip(shape, self.roi_size, selected, strict=True):
+                chunk_start = int(chunk_index) * self.chunk_size
+                chunk_end = min(chunk_start + self.chunk_size, int(dimension))
+                low = max(0, chunk_end - roi)
+                high = min(chunk_start, int(dimension) - roi)
+                if low > high:
+                    raise ValueError("Positive chunk cannot fit inside the locked patch")
+                starts.append(int(self.R.randint(low, high + 1)))
+            self.starts = tuple(starts)
+            return
         self.starts = tuple(
             int(self.R.randint(0, int(dimension) - roi + 1))
             for dimension, roi in zip(shape, self.roi_size, strict=True)
@@ -157,7 +202,8 @@ class LoadChunkPatchd(RandomizableTransform, MapTransform):
         shape = tuple(int(value) for value in result["shape"])
         if any(dimension < self.roi_size[index] for index, dimension in enumerate(shape)):
             raise ValueError("Cached volume cannot supply the locked patch size")
-        self.randomize(shape)
+        positive_chunks = result.pop("positive_chunks", None)
+        self.randomize(shape, positive_chunks)
         combined = read_chunk_patch(
             Path(result["cache"]), self.starts, self.roi_size, self.chunk_size,
         )

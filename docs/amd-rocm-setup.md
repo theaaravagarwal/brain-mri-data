@@ -24,10 +24,11 @@ Then run in an elevated PowerShell terminal:
 
 ```powershell
 wsl --update
-wsl --shutdown
 ```
 
-Restart the Ubuntu distribution. Confirm WSL exposes the GPU interface:
+Reboot the complete Windows host before continuing; WSL is restored by its
+startup task. Do not use `wsl --shutdown` on this remotely administered host.
+Confirm WSL exposes the GPU interface after the host returns:
 
 ```bash
 grep -i microsoft /proc/sys/kernel/osrelease
@@ -92,8 +93,9 @@ sudo apt install -y ./amdgpu-install_7.2.70200-1_all.deb
 sudo amdgpu-install -y --usecase=wsl,rocm --no-dkms
 ```
 
-Do not install DKMS or the native Linux graphics driver inside WSL. Close WSL
-from PowerShell with `wsl --shutdown`, reopen Ubuntu, then verify:
+Do not install DKMS or the native Linux graphics driver inside WSL. Reboot the
+complete Windows host, wait for the WSL startup task to restore the distribution,
+then verify:
 
 ```bash
 rocminfo | grep -E 'Name:|Marketing Name:'
@@ -155,20 +157,13 @@ the GPU to WSL through `/dev/dxg`. Use the project monitor instead:
 It combines Linux trainer CPU/RAM with Windows GPU adapter memory and compute
 engine counters. Press `Ctrl-C` to stop monitoring; it does not stop training.
 
-## Restarting WSL from Windows
+## Restarting the remotely administered WSL host
 
-Never run `wsl --shutdown` through the AMD worker's SSH connection: it closes
-the connection that is executing the command. Run the Windows-side launcher
-instead. It shuts WSL down, waits four seconds, and starts the default
-distribution so systemd and Tailscale can recover:
-
-```text
-Restart-BrainMRI-WSL.bat
-```
-
-The repository copies this pair to the Windows Documents folder when the AMD
-worker is configured. Run the `.bat` by double-clicking it or from a Windows
-PowerShell window; do not run it inside WSL.
+Never run `wsl --shutdown` on this machine, over SSH or otherwise. The owner
+does not have physical access, and stopping WSL can remove the only management
+path. If a WSL restart is genuinely required, reboot the complete Windows host;
+its startup task starts WSL again. Record the reason and notify the owner before
+initiating any reboot. Do not use the legacy `Restart-BrainMRI-WSL.bat` path.
 
 ## Optional: Ollama research-language worker
 

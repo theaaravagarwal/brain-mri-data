@@ -108,6 +108,22 @@ def validate_cnn_accelerator(profile: dict[str, Any], hip_version: str | None) -
         raise ValueError("The cuda profile requires a CUDA PyTorch build")
 
 
+def training_patch_sampling(study: dict[str, Any]) -> dict[str, Any]:
+    """Validate and normalize the study-locked training patch sampler."""
+    configured = study["study"].get("training", {}).get("patch_sampling")
+    if configured is None:
+        return {"strategy": "uniform_v1", "foreground_probability": 0.0}
+    if not isinstance(configured, dict):
+        raise ValueError("training.patch_sampling must be a mapping")
+    strategy = configured.get("strategy")
+    probability = float(configured.get("foreground_probability", -1.0))
+    if strategy != "foreground_chunk_mixture_v1":
+        raise ValueError("Unsupported training.patch_sampling strategy")
+    if not 0.0 < probability <= 1.0:
+        raise ValueError("foreground patch probability must be greater than zero and at most one")
+    return {"strategy": strategy, "foreground_probability": probability}
+
+
 def set_seed(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
@@ -167,10 +183,14 @@ def make_transforms(training: bool, patch_size: tuple[int, int, int]) -> Compose
     return Compose(transforms)
 
 
-def make_cached_training_transforms(patch_size: tuple[int, int, int], chunk_size: int) -> Compose:
+def make_cached_training_transforms(
+    patch_size: tuple[int, int, int],
+    chunk_size: int,
+    foreground_probability: float = 0.0,
+) -> Compose:
     """Apply the same random crop/augmentation suffix to deterministic cached inputs."""
     return Compose([
-        LoadChunkPatchd(patch_size, chunk_size),
+        LoadChunkPatchd(patch_size, chunk_size, foreground_probability),
         RandFlipd(keys=("image", "label"), prob=0.5, spatial_axis=0),
         RandFlipd(keys=("image", "label"), prob=0.5, spatial_axis=1),
         RandFlipd(keys=("image", "label"), prob=0.5, spatial_axis=2),
@@ -302,6 +322,7 @@ def main() -> None:
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     patch_size = tuple(int(value) for value in profile["patch_size"])
+    patch_sampling = training_patch_sampling(study)
     raw_root = args.data_root.resolve() / "raw"
     train_items = manifest_items(study, raw_root, args.arm, "train")
     val_items = manifest_items(study, raw_root, args.arm, "val")
@@ -322,12 +343,18 @@ def main() -> None:
         }
         train_loader = loader(
             cache_items,
-            make_cached_training_transforms(patch_size, int(cache_payload["chunk_size"])),
+            make_cached_training_transforms(
+                patch_size,
+                int(cache_payload["chunk_size"]),
+                float(patch_sampling["foreground_probability"]),
+            ),
             profile,
             True,
             int(profile["batch_size"]),
         )
     else:
+        if patch_sampling["foreground_probability"]:
+            raise ValueError("Foreground patch sampling requires an indexed training cache")
         train_loader = loader(
             train_items, make_transforms(True, patch_size), profile, True, int(profile["batch_size"]),
         )
@@ -369,6 +396,7 @@ def main() -> None:
         "epochs": args.epochs,
         "init_filters": args.init_filters,
         "training_config": training,
+        "patch_sampling": patch_sampling,
         "training_cache": cache_info,
         "trainer_sha256": file_sha256(Path(__file__)),
         "pamc_sha256": file_sha256(Path(__file__).with_name("pamc.py")),

@@ -23,8 +23,8 @@ training as the primary external test set.
 
 | Worker | Runtime preset | Settings |
 | --- | --- | --- |
-| NVIDIA RTX 3060, 12 GB VRAM | `cuda` | CUDA FP16, two loader workers, 80^3 patch |
-| AMD RX 7900 XTX, CPU-limited host | language only | bounded, structured-output/evidence benchmarks after GPU verification |
+| NVIDIA RTX 3060, 12 GB VRAM | `cuda` | CUDA FP16, batch 4, eight loader workers, prefetch 2, 80^3 patch, indexed chunk cache |
+| AMD RX 7900 XTX, 24 GB VRAM, CPU-throttled host | `amd`; language only | bounded, GPU-verified structured-output/evidence benchmarks; avoid CPU-heavy work |
 
 The RTX 3060 trains every frozen CNN `(arm, seed)` job. The AMD worker must not
 run CNN study arms: it is reserved for the separately evaluated, constrained
@@ -35,3 +35,5 @@ non-identifying prediction artifacts over Tailscale.
 
 The importer environment has no training framework. Use `uv sync --extra cuda`
 or `uv sync --extra amd` in a separate Python 3.12 environment, never both.
+See [the compute-host runbook](compute-hosts.md) for canonical SSH targets,
+repository paths, workload placement, and the WSL restart rule.
