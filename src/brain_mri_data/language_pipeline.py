@@ -30,6 +30,15 @@ CLINICAL_PATTERN = re.compile(
     r"take medication|chemotherapy|surgery|prognosis)\b",
     re.IGNORECASE,
 )
+PLANNER_UNSAFE_PATTERN = re.compile(
+    r"<\s*/?\s*(?:system|assistant)|"
+    r"\bignore\b.{0,80}\b(?:rules?|schema|allowed_jobs)\b|"
+    r'"(?:tool|command)"\s*:|'
+    r"(?:/home/|/mnt/|\\\\)|"
+    r"\b(?:start|execute|launch|claim|train|shell|bypass|pretend)\b|"
+    r"executed\s*=\s*true",
+    re.IGNORECASE | re.DOTALL,
+)
 
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -712,6 +721,44 @@ def validate_proposal(
     if not parsed.abstained and (parsed.run_id, parsed.profile) not in allowed:
         raise ValueError("proposal is not an available pre-approved matrix job")
     return parsed
+
+
+def planner_preflight(
+    request_text: str, allowed_jobs: list[dict[str, str]]
+) -> JobProposalV1 | None:
+    """Resolve obvious safe matches and unsafe requests without consulting an LLM."""
+    normalized = re.sub(
+        r"\b(?:do not execute|without executing anything)\b",
+        "",
+        request_text,
+        flags=re.IGNORECASE,
+    )
+    if PLANNER_UNSAFE_PATTERN.search(normalized):
+        return JobProposalV1.model_validate(
+            {
+                "schema_version": "job-proposal/v1",
+                "abstained": True,
+                "run_id": None,
+                "profile": None,
+                "reason_code": "unsafe_request",
+                "reason": "The request contains an execution, tool, path, or instruction-override pattern.",
+                "executed": False,
+            }
+        )
+    exact = [job for job in allowed_jobs if job["run_id"] in request_text]
+    if len(exact) == 1:
+        return JobProposalV1.model_validate(
+            {
+                "schema_version": "job-proposal/v1",
+                "abstained": False,
+                "run_id": exact[0]["run_id"],
+                "profile": exact[0]["profile"],
+                "reason_code": "exact_preapproved_match",
+                "reason": "The request names exactly one available pre-approved job for human review.",
+                "executed": False,
+            }
+        )
+    return None
 
 
 def read_untrusted_request(path: Path, maximum_bytes: int = 4096) -> str:

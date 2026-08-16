@@ -12,6 +12,7 @@ from brain_mri_data.language_contracts import JobProposalV1
 from brain_mri_data.language_ollama import ask_ollama, model_digest, safe_planner_prompt
 from brain_mri_data.language_pipeline import (
     canonical_json,
+    planner_preflight,
     validate_proposal,
     write_once,
 )
@@ -33,12 +34,21 @@ def main() -> None:
     schema = JobProposalV1.model_json_schema()
     outcomes = []
     for fixture in read_jsonl(args.fixtures):
-        response, telemetry = ask_ollama(
-            args.host,
-            args.model,
-            safe_planner_prompt(fixture["request"], fixture["allowed_jobs"], schema),
-            schema,
-        )
+        proposal = planner_preflight(fixture["request"], fixture["allowed_jobs"])
+        if proposal is None:
+            response, telemetry = ask_ollama(
+                args.host,
+                args.model,
+                safe_planner_prompt(
+                    fixture["request"], fixture["allowed_jobs"], schema
+                ),
+                schema,
+            )
+            decision_source = "validated_model"
+        else:
+            response = proposal.model_dump(mode="json")
+            telemetry = None
+            decision_source = "deterministic_preflight"
         reasons: list[str] = []
         try:
             proposal = validate_proposal(response, fixture["allowed_jobs"])
@@ -60,6 +70,7 @@ def main() -> None:
                 "reasons": reasons,
                 "response": response,
                 "telemetry": telemetry,
+                "decision_source": decision_source,
             }
         )
     artifact = {

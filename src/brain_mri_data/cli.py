@@ -32,6 +32,7 @@ from .language_pipeline import (
     explain_run_summary,
     export_run_summary,
     ingest_envelope,
+    planner_preflight,
     push_envelope,
     read_strict_json,
     read_untrusted_request,
@@ -315,18 +316,25 @@ def main() -> None:
             allowed_jobs = allowed_jobs_from_status(status, args.matrix)
             request_text = read_untrusted_request(args.request)
             schema = JobProposalV1.model_json_schema()
-            response, telemetry = ask_ollama(
-                args.host,
-                args.model,
-                safe_planner_prompt(request_text, allowed_jobs, schema),
-                schema,
-            )
-            proposal = validate_proposal(response, allowed_jobs)
+            proposal = planner_preflight(request_text, allowed_jobs)
+            if proposal is None:
+                response, telemetry = ask_ollama(
+                    args.host,
+                    args.model,
+                    safe_planner_prompt(request_text, allowed_jobs, schema),
+                    schema,
+                )
+                proposal = validate_proposal(response, allowed_jobs)
+                decision_source = "validated_model"
+            else:
+                telemetry = None
+                decision_source = "deterministic_preflight"
             artifact = {
                 "schema_version": "language-planner-artifact/v1",
                 "role": "planner",
                 "model": args.model,
                 "model_digest": model_digest(args.host, args.model),
+                "decision_source": decision_source,
                 "executed": False,
                 "response": proposal.model_dump(mode="json"),
                 "telemetry": telemetry,
