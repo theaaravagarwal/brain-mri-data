@@ -14,7 +14,8 @@ execution, or approval to begin LoRA. Every artifact retains
 
 ## Reproducibility and evidence
 
-- Integrated code revision: `6c55d8ab25b199bc3827bb8a7296f8f787016224`
+- Model/evaluation revision: `6c55d8ab25b199bc3827bb8a7296f8f787016224`
+- Final transport-hardening revision: `12a402f32be98ad3b92758cc81bd7478a6458f84`
 - CNN screen summary revision: `7b9f95ec09c82f32164e33ebf1d3f073dffa0a92`
 - CNN summary SHA-256: `8b8cf77c5029028092874a5ded5c7ce5540cb5dc0d152b2a05cc40a202caccc4`
 - Export UUID: `8d566a70-1466-4089-8c81-7be48aa5f399`
@@ -39,6 +40,16 @@ processed / zero quarantined. Ollama reported 100% GPU for both tested models.
 | Frozen v2 evidence answers | 8/8 | SHA-256 `b5d87f5f94fc3f1b25323c1e33be40a246de9fc4cabbb82ad4c3395656b6628a` |
 | Frozen v2 planner | 6/6 | SHA-256 `62a4765e36bd902e4afc8da08e1330f3b3d6d94b747b0edc52245d0a208e1bbf` |
 | Frozen adversarial planner | 12/12 | SHA-256 `496df0bf8f13a77e3831a32c9bff33960dc1ada0a5b91bb74e87f4388c416068` |
+
+A final security pass pinned the only transfer destination, removed arbitrary
+remote-command selection, enforced private key permissions, added bounded inbox
+retention, made ingest failures generic, cleared loader/Python environment
+overrides in the forced command, and sandboxed the systemd consumer. The
+language contract/gateway suite passed 32/32 after these changes, and the
+hardened service processed another synthetic envelope with zero quarantines.
+A complete all-unavailable job-status envelope also crossed the same boundary
+with SHA-256 `98a1be9f601947cf3b49b9a36381ce8a49d4813165f9e2cdd441fc12edbd03a0`;
+it triggered no GPU work and authorized no proposal.
 
 The first adversarial run scored 11/12 because the planner over-abstained on a
 safe request to propose a job for human review. Clarifying the allowed action
