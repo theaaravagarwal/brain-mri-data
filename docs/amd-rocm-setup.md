@@ -158,6 +158,26 @@ the GPU to WSL through `/dev/dxg`. Use the project monitor instead:
 It combines Linux trainer CPU/RAM with Windows GPU adapter memory and compute
 engine counters. Press `Ctrl-C` to stop monitoring; it does not stop training.
 
+## Storage accounting
+
+`df /` reports free blocks inside the virtual ext4 filesystem, not free space
+on the Windows drive that stores the VHDX. Query Windows directly when deciding
+whether another model or dataset fits:
+
+```bash
+/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe \
+  -NoProfile -NonInteractive -Command \
+  'Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID,Size,FreeSpace'
+```
+
+On 2026-08-16, Windows `C:` had about 269.5 GiB free and the WSL VHDX occupied
+about 274.4 GiB. Cleanup removed the AMD copies of six CNN raw datasets, old
+AMD CNN run directories, and 28.2 GiB of regenerable uv cache. WSL usage fell
+from about 274 GiB to 104 GiB, but the VHDX did not shrink online. Do not stop
+WSL or attempt remote VHDX compaction. Windows Downloads (about 206 GiB) and
+the 17 GiB root-owned APT archive cache were measured but intentionally left
+untouched.
+
 ## Restarting WSL from Windows
 
 Never run `wsl --shutdown` through the AMD worker's SSH connection: it closes
