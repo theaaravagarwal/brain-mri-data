@@ -16,6 +16,9 @@ worker; synchronize only code and approved non-identifying artifacts.
   persistent workers, and the indexed chunk cache
 - Language-transfer role: construct aggregate-only JSON envelopes and push them
   one-way to AMD. Never transfer MRI data, case-level metrics, paths, or free text.
+- Dedicated language-transfer identity:
+  `runs/language-transport/brain_mri_language_ed25519`; the private key is
+  Git-ignored and valid only for AMD's forced ingest command.
 
 ## AMD research-language worker
 

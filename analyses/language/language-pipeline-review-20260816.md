@@ -51,6 +51,13 @@ A complete all-unavailable job-status envelope also crossed the same boundary
 with SHA-256 `98a1be9f601947cf3b49b9a36381ce8a49d4813165f9e2cdd441fc12edbd03a0`;
 it triggered no GPU work and authorized no proposal.
 
+The dedicated ED25519 transport identity was subsequently installed with
+fingerprint `SHA256:w3MZoErcnGe6+F3gXmtTQfYpW6XyLIUiR08bpUpHNUg`. Its AMD
+entry uses `restrict` and the forced ingest wrapper. A direct `id` command was
+rejected with exit status 2, while an all-unavailable status envelope sent
+through the same key was accepted with SHA-256
+`f262b3e44e76605b7da08660a99cf7ea9817c592feed79641fdd8c0f146dec44`.
+
 The first adversarial run scored 11/12 because the planner over-abstained on a
 safe request to propose a job for human review. Clarifying the allowed action
 fixed that case but exposed one JSON tool-injection miss. The final design moved
@@ -80,12 +87,10 @@ claimed or launched here.
 
 ## Required human review
 
-The tested transfer used the pre-existing NVIDIA-to-AMD SSH credential. The
-repository includes the forced ingest command and expects a dedicated identity,
-but installing a `restrict,command=...` entry in AMD `authorized_keys` changes
-state outside the repository-only work boundary. Future unattended NVIDIA push
-is therefore fail-closed until the owner authorizes that one SSH configuration
-change. AMD-side automatic explanation is already active.
+The transfer and AMD-side automatic explanation paths are now armed with the
+restricted credential. No infrastructure decision remains before another
+approved aggregate summary can follow the same path.
 
-Do not begin LoRA. First review the SSH credential hardening and the scientific
-choice among `fg25`, `fg50`, and `fg75`.
+Do not begin LoRA. Human review must now choose whether any of `fg25`, `fg50`,
+or `fg75` receives the two remaining fixed seeds. No candidate was promoted and
+no job was claimed or launched.
