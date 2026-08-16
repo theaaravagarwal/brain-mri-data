@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import math
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -23,6 +25,7 @@ from brain_mri_data.language_pipeline import (
     flatten_evidence,
     ingest_envelope,
     planner_preflight,
+    push_envelope,
     read_strict_json,
     sha256_bytes,
     sha256_file,
@@ -117,6 +120,29 @@ def explanation(validated: ResearchRunSummaryEnvelopeV1) -> dict:
 
 
 class StrictJsonTests(unittest.TestCase):
+    def test_ingest_cli_returns_generic_error_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "brain_mri_data.cli",
+                    "language",
+                    "ingest",
+                    "--inbox",
+                    temporary,
+                ],
+                input=b'{"path":"/secret/value"}',
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertNotIn(b"Traceback", result.stderr)
+            self.assertEqual(
+                json.loads(result.stdout),
+                {"status": "rejected", "reason_code": "invalid_envelope"},
+            )
+
     def test_rejects_duplicate_keys(self) -> None:
         with self.assertRaisesRegex(ValueError, "duplicate"):
             strict_json_bytes(b'{"a":1,"a":2}')
@@ -316,6 +342,27 @@ class ExportAndIngestTests(unittest.TestCase):
             link.symlink_to(target)
             with self.assertRaisesRegex(ValueError, "non-symlink"):
                 read_strict_json(link)
+
+    def test_ingest_enforces_retention_quota(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            inbox = Path(temporary)
+            ingest_envelope(canonical_json(envelope()), inbox)
+            second = envelope("22345678-1234-4234-9234-123456789abc")
+            with (
+                patch("brain_mri_data.language_pipeline.MAX_INBOX_FILES", 1),
+                self.assertRaisesRegex(ValueError, "retention quota"),
+            ):
+                ingest_envelope(canonical_json(second), inbox)
+
+    def test_push_restricts_destination_and_identity_permissions(self) -> None:
+        with self.assertRaisesRegex(ValueError, "configured AMD host"):
+            push_envelope(Path("missing.json"), "root@example.invalid")
+        with tempfile.TemporaryDirectory() as temporary:
+            identity = Path(temporary) / "identity"
+            identity.write_text("not-a-real-key")
+            identity.chmod(0o644)
+            with self.assertRaisesRegex(ValueError, "permissions"):
+                push_envelope(Path("missing.json"), identity=identity)
 
     def test_job_status_export_is_complete_and_routes_to_status_inbox(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

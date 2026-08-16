@@ -8,6 +8,16 @@ WorkingDirectory=%h/brain-mri-data
 ExecStart=/usr/bin/flock -n %t/brain-mri-language-consume.lock %h/brain-mri-data/.venv/bin/brain-mri-data language consume-inbox --inbox %h/brain-mri-data/runs/language-inbox
 Nice=10
 CPUWeight=25
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/brain-mri-data/runs/language-inbox
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictSUIDSGID=true
 
 [Install]
 WantedBy=default.target

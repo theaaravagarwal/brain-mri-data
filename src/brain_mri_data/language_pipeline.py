@@ -25,6 +25,13 @@ from .run_matrix import expand_matrix
 
 MAX_ENVELOPE_BYTES = 256 * 1024
 MAX_JSON_DEPTH = 16
+MAX_INBOX_FILES = 1024
+MAX_INBOX_BYTES = 256 * 1024 * 1024
+AMD_LANGUAGE_HOST = "b@100.64.0.5"
+AMD_INGEST_COMMAND = (
+    "cd /home/b/brain-mri-data && "
+    ".venv/bin/brain-mri-data language ingest --inbox runs/language-inbox"
+)
 CLINICAL_PATTERN = re.compile(
     r"\b(?:you have|the patient has|diagnos(?:e|is|ed)|recommend(?:ed)? treatment|"
     r"take medication|chemotherapy|surgery|prognosis)\b",
@@ -455,6 +462,24 @@ def ingest_envelope(data: bytes, inbox: Path) -> dict[str, Any]:
     lock_descriptor = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
     with os.fdopen(lock_descriptor, "a+b") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        stored = [
+            path
+            for directory in (
+                "ready",
+                "processing",
+                "processed",
+                "quarantine",
+                "explanations",
+                "statuses",
+            )
+            for path in (inbox / directory).iterdir()
+            if path.is_file() and not path.is_symlink()
+        ]
+        if (
+            len(stored) >= MAX_INBOX_FILES
+            or sum(path.stat().st_size for path in stored) >= MAX_INBOX_BYTES
+        ):
+            raise ValueError("language inbox retention quota is full")
         if any(
             (inbox / directory / ready.name).exists()
             for directory in (
@@ -476,8 +501,19 @@ def ingest_envelope(data: bytes, inbox: Path) -> dict[str, Any]:
 
 
 def push_envelope(
-    path: Path, host: str, remote_command: str, identity: Path | None = None
+    path: Path, host: str = AMD_LANGUAGE_HOST, identity: Path | None = None
 ) -> dict[str, Any]:
+    if host != AMD_LANGUAGE_HOST:
+        raise ValueError(
+            "language envelopes may only be pushed to the configured AMD host"
+        )
+    if identity is not None:
+        if identity.is_symlink() or not identity.is_file():
+            raise ValueError("SSH identity must be a regular non-symlink file")
+        if identity.stat().st_mode & 0o077:
+            raise ValueError(
+                "SSH identity permissions must not allow group or other access"
+            )
     envelope = validate_transfer_envelope(read_strict_json(path))
     data = canonical_json(envelope.model_dump(mode="json"))
     command = [
@@ -496,11 +532,11 @@ def push_envelope(
     ]
     if identity is not None:
         command.extend(("-i", str(identity)))
-    command.extend((host, remote_command))
+    command.extend((host, AMD_INGEST_COMMAND))
     result = subprocess.run(command, input=data, capture_output=True, check=False)
     if result.returncode:
         raise RuntimeError(
-            f"language envelope push failed with status {result.returncode}: {result.stderr.decode(errors='replace').strip()}"
+            f"language envelope push failed with status {result.returncode}"
         )
     receipt = strict_json_bytes(result.stdout, maximum_bytes=16 * 1024)
     if receipt.get("export_id") != str(envelope.export_id) or receipt.get(

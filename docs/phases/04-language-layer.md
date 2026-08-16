@@ -46,6 +46,18 @@ quarantined and never displayed.
 The SSH key entry must use OpenSSH `restrict` plus the forced absolute command
 `/home/b/brain-mri-data/scripts/ingest_language_envelope.sh`. The automation key
 must not grant an interactive shell, PTY, forwarding, or arbitrary SFTP access.
+The expected entry shape is:
+
+```text
+restrict,command="/home/b/brain-mri-data/scripts/ingest_language_envelope.sh" ssh-ed25519 <dedicated-public-key> brain-mri-language-ingest
+```
+
+The wrapper also verifies the original client command, clears loader/Python
+environment overrides, and applies a private umask. The sender is pinned to
+`b@100.64.0.5`; arbitrary destinations and remote commands are rejected.
+Malformed input returns only a generic rejection without a traceback. The inbox
+has both file-count and byte quotas so a valid transfer credential cannot create
+unbounded disk or GPU work.
 
 Design references: [Ollama structured outputs](https://docs.ollama.com/capabilities/structured-outputs),
 [OWASP prompt-injection defenses](https://genai.owasp.org/llmrisk/llm01-prompt-injection/),

@@ -149,10 +149,6 @@ def main() -> None:
     language_push = language_sub.add_parser("push")
     language_push.add_argument("export", type=Path)
     language_push.add_argument("--host", default="b@100.64.0.5")
-    language_push.add_argument(
-        "--remote-command",
-        default="cd /home/b/brain-mri-data && .venv/bin/brain-mri-data language ingest --inbox runs/language-inbox",
-    )
     language_push.add_argument("--identity", type=Path)
     language_ingest = language_sub.add_parser("ingest")
     language_ingest.add_argument(
@@ -267,9 +263,7 @@ def main() -> None:
             print(json.dumps({"path": str(path), **receipt}, indent=2, sort_keys=True))
             return
         if args.language_command == "push":
-            receipt = push_envelope(
-                args.export, args.host, args.remote_command, args.identity
-            )
+            receipt = push_envelope(args.export, args.host, args.identity)
             local_receipt = args.export.with_suffix(".transfer-receipt.json")
             write_once(local_receipt, canonical_json(receipt))
             print(json.dumps(receipt, indent=2, sort_keys=True))
@@ -285,7 +279,17 @@ def main() -> None:
             )
             return
         if args.language_command == "ingest":
-            receipt = ingest_envelope(sys.stdin.buffer.read(256 * 1024 + 1), args.inbox)
+            try:
+                receipt = ingest_envelope(
+                    sys.stdin.buffer.read(256 * 1024 + 1), args.inbox
+                )
+            except (OSError, TypeError, ValueError):
+                print(
+                    json.dumps(
+                        {"status": "rejected", "reason_code": "invalid_envelope"}
+                    )
+                )
+                raise SystemExit(2) from None
             print(json.dumps(receipt, sort_keys=True))
             return
         if args.language_command == "explain-run-summary":
