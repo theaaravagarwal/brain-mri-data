@@ -14,4 +14,7 @@ Status: bounded local evaluation in progress; language results remain separate f
 - Versioned v2 explainer fixtures exercise six structured-result cases and
   eight source-grounded safety/provenance questions without replacing the
   original smoke fixtures.
+- `scripts/run_language_eval_v2.sh` runs the two explainer suites followed by
+  the planner suite, records fixture hashes, refuses an existing revision
+  directory, and fails unless each served model is observed at 100% GPU.
 - A synthetic structured-output LoRA is allowed only if the frozen explainer misses the predeclared benchmark threshold; medical-literature fine-tuning is out of scope.
