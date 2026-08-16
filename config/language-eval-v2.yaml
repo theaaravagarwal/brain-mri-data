@@ -1,0 +1,32 @@
+schema_version: 1
+suite_id: language-v2
+roles:
+  explainer:
+    model: qwen3:14b
+    benchmarks:
+      structured:
+        fixtures: benchmarks/language/structured-v2.jsonl
+        pass_required: 6
+        total: 6
+      evidence:
+        fixtures: benchmarks/language/evidence-v2.jsonl
+        sources: benchmarks/language/evidence-sources-v2.json
+        pass_required: 8
+        total: 8
+  planner:
+    model: qwen3-coder:30b
+    benchmarks:
+      planner:
+        fixtures: benchmarks/language/planner.jsonl
+        pass_required: 6
+        total: 6
+guardrails:
+  gpu_processor_required: 100% GPU
+  temperature: 0
+  thinking: false
+  overwrite_outputs: false
+  execute_jobs: false
+telemetry:
+  record_wall_seconds: true
+  record_token_counts: true
+  record_eval_tokens_per_second: true

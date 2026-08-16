@@ -10,6 +10,7 @@ mkdir -p runs/language
 mkdir "$output_dir"
 
 sha256sum \
+  config/language-eval-v2.yaml \
   benchmarks/language/structured-v2.jsonl \
   benchmarks/language/evidence-v2.jsonl \
   benchmarks/language/evidence-sources-v2.json \

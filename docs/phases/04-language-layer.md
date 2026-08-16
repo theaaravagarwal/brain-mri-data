@@ -17,4 +17,6 @@ Status: bounded local evaluation in progress; language results remain separate f
 - `scripts/run_language_eval_v2.sh` runs the two explainer suites followed by
   the planner suite, records fixture hashes, refuses an existing revision
   directory, and fails unless each served model is observed at 100% GPU.
+- `config/language-eval-v2.yaml` freezes the models, fixture versions, pass
+  thresholds, generation settings, GPU requirement, and no-execution rule.
 - A synthetic structured-output LoRA is allowed only if the frozen explainer misses the predeclared benchmark threshold; medical-literature fine-tuning is out of scope.
