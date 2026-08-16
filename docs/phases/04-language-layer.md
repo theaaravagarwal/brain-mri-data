@@ -19,4 +19,21 @@ Status: bounded local evaluation in progress; language results remain separate f
   directory, and fails unless each served model is observed at 100% GPU.
 - `config/language-eval-v2.yaml` freezes the models, fixture versions, pass
   thresholds, generation settings, GPU requirement, and no-execution rule.
+- `scripts/run_language_prototype.py explain` consumes only a validated CNN
+  result envelope and validates the generated explanation before writing an
+  immutable artifact. `plan` reads the frozen run matrix, treats the request as
+  untrusted, validates any proposal, records `executed: false`, and never calls
+  the run-claim or training paths.
+
+Prototype smoke commands:
+
+```bash
+./.venv/bin/python scripts/run_language_prototype.py \
+  --output runs/language/prototype-explanation.json explain \
+  --result examples/language/cnn-result-envelope.json
+
+./.venv/bin/python scripts/run_language_prototype.py \
+  --output runs/language/prototype-plan.json plan \
+  --request-file examples/language/planner-request.txt
+```
 - A synthetic structured-output LoRA is allowed only if the frozen explainer misses the predeclared benchmark threshold; medical-literature fine-tuning is out of scope.

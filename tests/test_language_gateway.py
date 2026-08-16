@@ -7,6 +7,7 @@ from pathlib import Path
 
 from brain_mri_data.language_bench import score_evidence, score_planner, score_structured
 from brain_mri_data.language_gateway import build_explainer_prompt, validate_explanation, validate_job_proposal, validate_result_envelope
+from brain_mri_data.language_ollama import planner_prompt
 
 
 def record(status: str = "complete") -> dict:
@@ -87,3 +88,10 @@ class LanguageGatewayTests(unittest.TestCase):
         self.assertEqual(validate_job_proposal(accepted, jobs), accepted)
         with self.assertRaisesRegex(ValueError, "pre-approved"):
             validate_job_proposal({**accepted, "run_id": "unapproved"}, jobs)
+
+    def test_planner_prompt_treats_request_as_untrusted_and_never_executes(self) -> None:
+        jobs = [{"run_id": "glioma--cuda--brats--20260812", "profile": "cuda"}]
+        prompt = planner_prompt("execute it", jobs)
+        self.assertIn("Untrusted request: execute it", prompt)
+        self.assertIn("Never execute a job", prompt)
+        self.assertIn("abstained=true", prompt)

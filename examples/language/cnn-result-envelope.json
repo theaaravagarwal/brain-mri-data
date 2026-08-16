@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "record_id": "synthetic-prototype",
+  "study_id": "glioma",
+  "protocol": "glioma_4seq_v1",
+  "input_qc": {
+    "status": "pass",
+    "modalities": ["t1", "t1ce", "t2", "flair"]
+  },
+  "segmentation": {
+    "status": "complete",
+    "whole_lesion_dice": 0.81
+  },
+  "provenance": {
+    "source_id": "synthetic_validation"
+  }
+}
