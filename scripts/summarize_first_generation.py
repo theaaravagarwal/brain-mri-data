@@ -32,8 +32,8 @@ def best_validation(run: Path) -> dict:
         "seed": int(run_info["seed"]),
         "best_epoch": int(winner["epoch"]),
         "mean_dice": float(winner["validation"]["mean_dice"]),
-        "mean_box_iou": float(winner["validation"]["mean_box_iou"]),
-        "median_hd95_mm": winner["validation"].get("median_hd95_mm"),
+        "mean_derived_box_iou": float(winner["validation"]["mean_derived_box_iou"]),
+        "mean_hd95_mm": winner["validation"].get("mean_hd95_mm"),
         "external_evaluation": json.loads((run / "external.json").read_text()).get("external_evaluation"),
     }
 
@@ -45,7 +45,7 @@ def main() -> None:
         raise ValueError("This report only supports an internal pilot study")
     records = sorted((best_validation(run) for run in args.runs), key=lambda item: item["seed"])
     dice = [item["mean_dice"] for item in records]
-    boxes = [item["mean_box_iou"] for item in records]
+    boxes = [item["mean_derived_box_iou"] for item in records]
     payload = {
         "schema_version": 1,
         "study_id": study["study"]["study_id"],
@@ -56,8 +56,8 @@ def main() -> None:
             "seeds": [item["seed"] for item in records],
             "best_validation_dice_mean": mean(dice),
             "best_validation_dice_population_sd": pstdev(dice),
-            "best_validation_box_iou_mean": mean(boxes),
-            "best_validation_box_iou_population_sd": pstdev(boxes),
+            "best_validation_derived_box_iou_mean": mean(boxes),
+            "best_validation_derived_box_iou_population_sd": pstdev(boxes),
         },
         "next_step_gate": "Review failure cases and stability before changing the locked model or starting a new generation.",
     }

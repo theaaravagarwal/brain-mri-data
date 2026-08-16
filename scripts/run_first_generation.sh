@@ -12,8 +12,11 @@ cd "$(dirname "$0")/.."
 STAGE_DIR="${1:?usage: $0 STAGED_BRATS_DIRECTORY [epochs]}"
 EPOCHS="${2:-10}"
 RAW_DIR="data/raw/brats2020_kaggle"
-STUDY="data/manifests/glioma.pilot.full.json"
-REPORT="runs/glioma-pilot-full--cuda--first-generation.json"
+STUDY_CONFIG="config/studies/glioma-pilot-v3-batch4.yaml"
+STUDY="data/manifests/glioma.pilot.full.v3.batch4.json"
+CACHE="data/cache/glioma-pilot-full-repaired--chunk20-v1"
+PROFILE="training/profiles/cuda-batch4.yaml"
+REPORT="runs/glioma-pilot-full-v3-batch4--cuda--first-generation.json"
 SEEDS=(20260812 20260813 20260814)
 
 if [[ ! -x .venv/bin/brain-mri-data || ! -x .venv/bin/python ]]; then
@@ -50,28 +53,32 @@ echo "$(date -Is) indexing and validating the full local source"
 .venv/bin/brain-mri-data export-monai brats2020_kaggle
 
 if [[ -e "$STUDY" ]]; then
-  echo "Refusing to overwrite immutable full-data study: $STUDY" >&2
-  exit 1
+  echo "$(date -Is) using existing immutable full-data study: $STUDY"
+else
+  .venv/bin/brain-mri-data build-study "$STUDY_CONFIG" --output "${STUDY#data/manifests/}"
 fi
-.venv/bin/brain-mri-data build-study config/studies/glioma-pilot.yaml --output "${STUDY#data/manifests/}"
+
+echo "$(date -Is) building or validating chunk-major training cache"
+.venv/bin/python scripts/build_training_cache.py \
+  --study "$STUDY" --data-root data --output "$CACHE" --arm brats --chunk-size 20
 
 for seed in "${SEEDS[@]}"; do
-  run="runs/glioma-pilot-full--cuda--brats--${seed}--e${EPOCHS}"
+  run="runs/glioma-pilot-full-v3-batch4--cuda--brats--${seed}--e${EPOCHS}"
   if [[ -e "$run" ]]; then
     echo "Refusing to reuse a run directory: $run" >&2
     exit 1
   fi
   echo "$(date -Is) training full-data baseline seed=$seed epochs=$EPOCHS"
   .venv/bin/python training/train_glioma.py \
-    --study "$STUDY" --data-root data --profile training/profiles/cuda.yaml --arm brats \
-    --seed "$seed" --epochs "$EPOCHS" --output "$run"
+    --study "$STUDY" --data-root data --profile "$PROFILE" --arm brats \
+    --seed "$seed" --epochs "$EPOCHS" --output "$run" --training-cache "$CACHE/cache.json"
 done
 
 .venv/bin/python scripts/summarize_first_generation.py \
   --study "$STUDY" --output "$REPORT" \
-  "runs/glioma-pilot-full--cuda--brats--20260812--e${EPOCHS}" \
-  "runs/glioma-pilot-full--cuda--brats--20260813--e${EPOCHS}" \
-  "runs/glioma-pilot-full--cuda--brats--20260814--e${EPOCHS}"
+  "runs/glioma-pilot-full-v3-batch4--cuda--brats--20260812--e${EPOCHS}" \
+  "runs/glioma-pilot-full-v3-batch4--cuda--brats--20260813--e${EPOCHS}" \
+  "runs/glioma-pilot-full-v3-batch4--cuda--brats--20260814--e${EPOCHS}"
 
 echo "$(date -Is) first generation complete: $REPORT"
 echo "External testing remains locked: acquire and provenance-review an independent source before testing."

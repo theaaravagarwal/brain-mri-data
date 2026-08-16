@@ -32,6 +32,17 @@ class TrainingLockTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "effective_batch_size"):
             validate_profile_against_study({**self.profile, "effective_batch_size": 2}, self.study)
 
+    def test_locked_microbatch_size_is_enforced(self) -> None:
+        study = {
+            "study": {
+                **self.study["study"],
+                "training": {"mixed_precision": "fp16", "microbatch_size": 4},
+            }
+        }
+        validate_profile_against_study({**self.profile, "batch_size": 4}, study)
+        with self.assertRaisesRegex(ValueError, "batch_size"):
+            validate_profile_against_study({**self.profile, "batch_size": 2}, study)
+
     def test_cnn_study_rejects_rocm_profiles(self) -> None:
         validate_cnn_accelerator({"accelerator": "cuda"}, None)
         with self.assertRaisesRegex(ValueError, "restricted to the CUDA"):

@@ -37,9 +37,11 @@ from monai.transforms import (
 
 from brain_mri_data.indexer import resolve_case_path
 if __package__:
+    from .chunk_cache import LoadChunkPatchd, load_cache_records
     from .pamc import PamcSegResNet, mask_one_modality, modality_consistency_loss
     from .evaluation import box_iou_per_case, deterministic_mask_one_modality, dice_per_case, hd95_mm_per_case
 else:
+    from chunk_cache import LoadChunkPatchd, load_cache_records
     from pamc import PamcSegResNet, mask_one_modality, modality_consistency_loss
     from evaluation import box_iou_per_case, deterministic_mask_one_modality, dice_per_case, hd95_mm_per_case
 
@@ -67,6 +69,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--init-filters", type=int, default=32)
     parser.add_argument("--validation-interval", type=int, default=1)
+    parser.add_argument("--training-cache", type=Path, help="completed chunk-major cache manifest for the locked train split")
     return parser.parse_args()
 
 
@@ -76,8 +79,8 @@ def load_profile(path: Path) -> dict[str, Any]:
     required = {"accelerator", "batch_size", "effective_batch_size", "num_workers", "prefetch_factor", "pin_memory", "patch_size"}
     if not isinstance(profile, dict) or profile.get("schema_version") != 1 or required - set(profile):
         raise ValueError(f"Invalid runtime profile: {path}")
-    if profile["batch_size"] != 1 or profile["effective_batch_size"] % profile["batch_size"]:
-        raise ValueError("This trainer requires a profile with batch size one and integral accumulation")
+    if int(profile["batch_size"]) < 1 or profile["effective_batch_size"] % profile["batch_size"]:
+        raise ValueError("This trainer requires a positive batch size and integral accumulation")
     return profile
 
 
@@ -92,6 +95,9 @@ def validate_profile_against_study(profile: dict[str, Any], study: dict[str, Any
         raise ValueError("Runtime profile effective_batch_size must match the locked study")
     if profile["mixed_precision"] != locked["training"]["mixed_precision"]:
         raise ValueError("Runtime profile mixed_precision must match the locked study")
+    locked_microbatch = locked["training"].get("microbatch_size")
+    if locked_microbatch is not None and int(profile["batch_size"]) != int(locked_microbatch):
+        raise ValueError("Runtime profile batch_size must match the locked study microbatch_size")
 
 
 def validate_cnn_accelerator(profile: dict[str, Any], hip_version: str | None) -> None:
@@ -132,6 +138,9 @@ def manifest_items(study: dict[str, Any], raw_root: Path, arm: str, split: str) 
             "positive_values": positive,
             "source_index": source_index.get(source_id, -1),
             "case_id": f"{source_id}:{record['case_id']}",
+            "provenance_sha256": hashlib.sha256(
+                json.dumps(record.get("provenance", {}).get("files", {}), sort_keys=True).encode()
+            ).hexdigest(),
         })
     if not output:
         raise ValueError(f"No {split} cases are available for arm={arm}")
@@ -158,7 +167,25 @@ def make_transforms(training: bool, patch_size: tuple[int, int, int]) -> Compose
     return Compose(transforms)
 
 
-def loader(items: list[dict[str, Any]], transforms: Compose, profile: dict[str, Any], shuffle: bool) -> DataLoader:
+def make_cached_training_transforms(patch_size: tuple[int, int, int], chunk_size: int) -> Compose:
+    """Apply the same random crop/augmentation suffix to deterministic cached inputs."""
+    return Compose([
+        LoadChunkPatchd(patch_size, chunk_size),
+        RandFlipd(keys=("image", "label"), prob=0.5, spatial_axis=0),
+        RandFlipd(keys=("image", "label"), prob=0.5, spatial_axis=1),
+        RandFlipd(keys=("image", "label"), prob=0.5, spatial_axis=2),
+        RandRotate90d(keys=("image", "label"), prob=0.5, max_k=3),
+        EnsureTyped(keys=("image", "label"), dtype=torch.float32),
+    ])
+
+
+def loader(
+    items: list[dict[str, Any]],
+    transforms: Compose,
+    profile: dict[str, Any],
+    shuffle: bool,
+    batch_size: int = 1,
+) -> DataLoader:
     workers = int(profile["num_workers"])
     options: dict[str, Any] = {
         "num_workers": workers,
@@ -167,7 +194,7 @@ def loader(items: list[dict[str, Any]], transforms: Compose, profile: dict[str, 
     }
     if workers:
         options["prefetch_factor"] = int(profile["prefetch_factor"])
-    return DataLoader(Dataset(items, transforms), batch_size=1, shuffle=shuffle, **options)
+    return DataLoader(Dataset(items, transforms), batch_size=batch_size, shuffle=shuffle, **options)
 
 
 def file_sha256(path: Path) -> str:
@@ -283,7 +310,27 @@ def main() -> None:
         if study.get("external_test")
         else []
     )
-    train_loader = loader(train_items, make_transforms(True, patch_size), profile, True)
+    cache_info: dict[str, Any] | None = None
+    if args.training_cache is not None:
+        cache_items, cache_payload = load_cache_records(args.training_cache, train_items, patch_size)
+        cache_info = {
+            "manifest": str(args.training_cache.resolve()),
+            "manifest_sha256": file_sha256(args.training_cache),
+            "schema_version": cache_payload["schema_version"],
+            "preprocessing_id": cache_payload["preprocessing_id"],
+            "chunk_size": cache_payload["chunk_size"],
+        }
+        train_loader = loader(
+            cache_items,
+            make_cached_training_transforms(patch_size, int(cache_payload["chunk_size"])),
+            profile,
+            True,
+            int(profile["batch_size"]),
+        )
+    else:
+        train_loader = loader(
+            train_items, make_transforms(True, patch_size), profile, True, int(profile["batch_size"]),
+        )
     val_loader = loader(val_items, make_transforms(False, patch_size), profile, False)
     external_loader = (
         loader(external_items, make_transforms(False, patch_size), profile, False)
@@ -306,7 +353,7 @@ def main() -> None:
     segmentation_loss = DiceCELoss(sigmoid=True, squared_pred=True, to_onehot_y=False)
     scaler = torch.amp.GradScaler("cuda", enabled=True)
     settings = study["study"].get("method", {}).get("pamc", {})
-    accumulation = int(profile["effective_batch_size"])
+    accumulation = int(profile["effective_batch_size"]) // int(profile["batch_size"])
     args.output.mkdir(parents=True, exist_ok=True)
     run = {
         "schema_version": 1,
@@ -322,6 +369,7 @@ def main() -> None:
         "epochs": args.epochs,
         "init_filters": args.init_filters,
         "training_config": training,
+        "training_cache": cache_info,
         "trainer_sha256": file_sha256(Path(__file__)),
         "pamc_sha256": file_sha256(Path(__file__).with_name("pamc.py")),
         "evaluation_sha256": file_sha256(Path(__file__).with_name("evaluation.py")),
