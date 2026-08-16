@@ -107,7 +107,7 @@ def explanation(validated: ResearchRunSummaryEnvelopeV1) -> dict:
     return {
         "schema_version": "run-summary-explanation/v1",
         "disclaimer": DISCLAIMER,
-        "summary": "The aggregate candidate passed both pre-specified research-screen gates.",
+        "summary": "The aggregate fg25 candidate passed the gate with mean HD95 of 18.0.",
         "evidence": flatten_evidence(validated),
         "limitations": "This is internal validation from one seed and requires human review.",
         "abstained": False,

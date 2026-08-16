@@ -571,7 +571,9 @@ def validate_run_explanation(
     }
     narrative_numbers = {
         float(match)
-        for match in re.findall(r"(?<![A-Za-z])[-+]?\d+(?:\.\d+)?", narrative)
+        for match in re.findall(
+            r"(?<![A-Za-z0-9])[-+]?\d+(?:\.\d+)?(?![A-Za-z0-9])", narrative
+        )
     }
     if not narrative_numbers <= allowed_numbers:
         raise ValueError("explanation narrative contains an unsupported numeric claim")
