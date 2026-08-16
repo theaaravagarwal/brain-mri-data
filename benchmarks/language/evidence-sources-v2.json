@@ -1,0 +1,7 @@
+{
+  "evaluation-policy": "An internal BraTS split is not an independent external test and cannot support an external-generalization claim.",
+  "planner-policy": "The planner is read-only. It may propose one pre-approved matrix job, but it cannot execute training or modify a run.",
+  "protocol-contract": "The adult-glioma research protocol requires exactly T1, T1ce, T2, and FLAIR MRI sequences.",
+  "provenance-policy": "Raw source files are stored once and manifests reference them. Raw medical data must not be silently duplicated or overwritten.",
+  "safety-policy": "The language layer is research output only. It may not diagnose, recommend treatment, give patient-specific advice, select a medical model, or inspect raw images."
+}

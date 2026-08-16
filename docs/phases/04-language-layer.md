@@ -11,4 +11,7 @@ Status: bounded local evaluation in progress; language results remain separate f
 - Promotion requires every frozen case to pass and `ollama ps` to report 100% GPU.
 - Benchmark outputs are immutable JSONL artifacts with the model name and
   per-case wall time, token counts, and generation throughput.
+- Versioned v2 explainer fixtures exercise six structured-result cases and
+  eight source-grounded safety/provenance questions without replacing the
+  original smoke fixtures.
 - A synthetic structured-output LoRA is allowed only if the frozen explainer misses the predeclared benchmark threshold; medical-literature fine-tuning is out of scope.
