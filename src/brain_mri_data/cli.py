@@ -150,7 +150,7 @@ def main() -> None:
     language_push.add_argument("--host", default="b@100.64.0.5")
     language_push.add_argument(
         "--remote-command",
-        default="cd /home/b/brain-mri-data && uv run brain-mri-data language ingest --inbox runs/language-inbox",
+        default="cd /home/b/brain-mri-data && .venv/bin/brain-mri-data language ingest --inbox runs/language-inbox",
     )
     language_push.add_argument("--identity", type=Path)
     language_ingest = language_sub.add_parser("ingest")
