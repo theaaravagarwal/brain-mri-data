@@ -401,6 +401,14 @@ class ExplanationAndPlannerTests(unittest.TestCase):
         clinical["summary"] = "The patient has cancer."
         with self.assertRaisesRegex(ValueError, "clinical"):
             validate_run_explanation(clinical, parsed)
+        identifier = explanation(parsed)
+        identifier["limitations"] = "No patient identifiers were considered."
+        with self.assertRaisesRegex(ValueError, "identifier-like"):
+            validate_run_explanation(identifier, parsed)
+        fabricated = explanation(parsed)
+        fabricated["summary"] = "The aggregate score was 0.99."
+        with self.assertRaisesRegex(ValueError, "numeric"):
+            validate_run_explanation(fabricated, parsed)
         executed = explanation(parsed)
         executed["executed"] = True
         with self.assertRaises(ValidationError):

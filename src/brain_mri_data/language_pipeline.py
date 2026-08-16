@@ -518,6 +518,15 @@ def flatten_evidence(envelope: ResearchRunSummaryEnvelopeV1) -> list[dict[str, A
         ],
     ]:
         evidence.extend(
+            (
+                {"field": f"{prefix}.variant_id", "value": result.variant_id},
+                {
+                    "field": f"{prefix}.foreground_probability",
+                    "value": result.foreground_probability,
+                },
+            )
+        )
+        evidence.extend(
             {
                 "field": f"{prefix}.metrics.{field}",
                 "value": getattr(result.metrics, field),
@@ -543,14 +552,29 @@ def validate_run_explanation(
     response: Any, envelope: ResearchRunSummaryEnvelopeV1
 ) -> RunSummaryExplanationV1:
     explanation = RunSummaryExplanationV1.model_validate(response)
-    if CLINICAL_PATTERN.search(f"{explanation.summary} {explanation.limitations}"):
+    narrative = f"{explanation.summary} {explanation.limitations}"
+    if CLINICAL_PATTERN.search(narrative):
         raise ValueError("explanation contains a prohibited clinical claim")
+    if FORBIDDEN_TEXT_PATTERN.search(narrative):
+        raise ValueError("explanation contains identifier-like or path-like content")
     expected = flatten_evidence(envelope)
     actual = [item.model_dump(mode="json") for item in explanation.evidence]
     if actual != expected:
         raise ValueError(
             "explanation evidence must exactly match the required envelope evidence"
         )
+    allowed_numbers = {
+        float(item["value"])
+        for item in expected
+        if isinstance(item["value"], (int, float))
+        and not isinstance(item["value"], bool)
+    }
+    narrative_numbers = {
+        float(match)
+        for match in re.findall(r"(?<![A-Za-z])[-+]?\d+(?:\.\d+)?", narrative)
+    }
+    if not narrative_numbers <= allowed_numbers:
+        raise ValueError("explanation narrative contains an unsupported numeric claim")
     if explanation.abstained:
         raise ValueError("valid completed run summaries must not be marked abstained")
     return explanation
