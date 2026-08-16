@@ -1,0 +1,1843 @@
+{
+  "all_cases": [
+    {
+      "bounding_box": [
+        53,
+        55,
+        49
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_019",
+      "dice_population_sd": 0.015359091022897554,
+      "lesion_fraction": 0.004905577956989247,
+      "lesion_voxels": 43797,
+      "mean_dice": 0.8584699432055155,
+      "mean_hd95_mm": 42.37731170654297,
+      "minimum_dice": 0.8442227840423584,
+      "seed_dice": [
+        0.8513943552970886,
+        0.8797926902770996,
+        0.8442227840423584
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        69,
+        112,
+        71
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_037",
+      "dice_population_sd": 0.016705114125271887,
+      "lesion_fraction": 0.021170586917562725,
+      "lesion_voxels": 189011,
+      "mean_dice": 0.8656106392542521,
+      "mean_hd95_mm": 16.930200735727947,
+      "minimum_dice": 0.8453947305679321,
+      "seed_dice": [
+        0.8863053321838379,
+        0.8453947305679321,
+        0.8651318550109863
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        64,
+        79,
+        61
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_055",
+      "dice_population_sd": 0.008363135233223662,
+      "lesion_fraction": 0.013260976702508961,
+      "lesion_voxels": 118394,
+      "mean_dice": 0.9033534725507101,
+      "mean_hd95_mm": 15.408386866251627,
+      "minimum_dice": 0.8964597582817078,
+      "seed_dice": [
+        0.8964597582817078,
+        0.9151232242584229,
+        0.8984774351119995
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        65,
+        88,
+        92
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_067",
+      "dice_population_sd": 0.004250284960459741,
+      "lesion_fraction": 0.014617495519713261,
+      "lesion_voxels": 130505,
+      "mean_dice": 0.925626258055369,
+      "mean_hd95_mm": 4.424613157908122,
+      "minimum_dice": 0.9203872084617615,
+      "seed_dice": [
+        0.9307975769042969,
+        0.9203872084617615,
+        0.9256939888000488
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        107,
+        147,
+        95
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_069",
+      "dice_population_sd": 0.016144193307296634,
+      "lesion_fraction": 0.017922267025089606,
+      "lesion_voxels": 160010,
+      "mean_dice": 0.7675905823707581,
+      "mean_hd95_mm": 10.583890279134115,
+      "minimum_dice": 0.7502131462097168,
+      "seed_dice": [
+        0.7891039252281189,
+        0.7502131462097168,
+        0.7634546756744385
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        54,
+        110,
+        82
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_074",
+      "dice_population_sd": 0.06943126450842899,
+      "lesion_fraction": 0.008600918458781363,
+      "lesion_voxels": 76789,
+      "mean_dice": 0.5752958655357361,
+      "mean_hd95_mm": 77.98875172932942,
+      "minimum_dice": 0.5077402591705322,
+      "seed_dice": [
+        0.6707845330238342,
+        0.5077402591705322,
+        0.5473628044128418
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        51,
+        81,
+        52
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_077",
+      "dice_population_sd": 0.03860398093880869,
+      "lesion_fraction": 0.005620855734767025,
+      "lesion_voxels": 50183,
+      "mean_dice": 0.7958992520968119,
+      "mean_hd95_mm": 33.0593147277832,
+      "minimum_dice": 0.7667409181594849,
+      "seed_dice": [
+        0.7667409181594849,
+        0.8504502177238464,
+        0.7705066204071045
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        44,
+        47,
+        53
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_081",
+      "dice_population_sd": 0.06137889707011846,
+      "lesion_fraction": 0.003531810035842294,
+      "lesion_voxels": 31532,
+      "mean_dice": 0.7766611576080322,
+      "mean_hd95_mm": 70.7414321899414,
+      "minimum_dice": 0.7068320512771606,
+      "seed_dice": [
+        0.7669217586517334,
+        0.8562296628952026,
+        0.7068320512771606
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        51,
+        82,
+        45
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_090",
+      "dice_population_sd": 0.013068123991980395,
+      "lesion_fraction": 0.003590837813620072,
+      "lesion_voxels": 32059,
+      "mean_dice": 0.8466245532035828,
+      "mean_hd95_mm": 23.7280756632487,
+      "minimum_dice": 0.8283763527870178,
+      "seed_dice": [
+        0.858281672000885,
+        0.8532156348228455,
+        0.8283763527870178
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        123,
+        110,
+        70
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_091",
+      "dice_population_sd": 0.006902821553745516,
+      "lesion_fraction": 0.01675560035842294,
+      "lesion_voxels": 149594,
+      "mean_dice": 0.8585735162099203,
+      "mean_hd95_mm": 18.680416107177734,
+      "minimum_dice": 0.8505101799964905,
+      "seed_dice": [
+        0.8673707246780396,
+        0.8505101799964905,
+        0.8578396439552307
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        66,
+        97,
+        66
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_098",
+      "dice_population_sd": 0.0037651792891022686,
+      "lesion_fraction": 0.016131944444444445,
+      "lesion_voxels": 144026,
+      "mean_dice": 0.9568936626116434,
+      "mean_hd95_mm": 9.720770239830017,
+      "minimum_dice": 0.9529390335083008,
+      "seed_dice": [
+        0.9529390335083008,
+        0.9619589447975159,
+        0.9557830095291138
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        67,
+        95,
+        69
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_100",
+      "dice_population_sd": 0.013872780084804423,
+      "lesion_fraction": 0.015149193548387096,
+      "lesion_voxels": 135252,
+      "mean_dice": 0.892420490582784,
+      "mean_hd95_mm": 10.640048662821451,
+      "minimum_dice": 0.8729594945907593,
+      "seed_dice": [
+        0.9043034911155701,
+        0.8729594945907593,
+        0.8999984860420227
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        33,
+        91,
+        43
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_102",
+      "dice_population_sd": 0.11140758018818336,
+      "lesion_fraction": 0.0027041890681003583,
+      "lesion_voxels": 24143,
+      "mean_dice": 0.5139180322488149,
+      "mean_hd95_mm": 83.83782704671223,
+      "minimum_dice": 0.4173552095890045,
+      "seed_dice": [
+        0.454383909702301,
+        0.6700149774551392,
+        0.4173552095890045
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        56,
+        81,
+        63
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_107",
+      "dice_population_sd": 0.02145088973609695,
+      "lesion_fraction": 0.0038430779569892473,
+      "lesion_voxels": 34311,
+      "mean_dice": 0.8758300145467123,
+      "mean_hd95_mm": 17.76421817143758,
+      "minimum_dice": 0.8536322712898254,
+      "seed_dice": [
+        0.8536322712898254,
+        0.9048357605934143,
+        0.869022011756897
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        43,
+        63,
+        91
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_110",
+      "dice_population_sd": 0.04809675156313398,
+      "lesion_fraction": 0.0017654569892473118,
+      "lesion_voxels": 15762,
+      "mean_dice": 0.5395686626434326,
+      "mean_hd95_mm": 43.95628865559896,
+      "minimum_dice": 0.47518569231033325,
+      "seed_dice": [
+        0.5527582764625549,
+        0.5907620191574097,
+        0.47518569231033325
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        65,
+        90,
+        70
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_120",
+      "dice_population_sd": 0.006056999135082094,
+      "lesion_fraction": 0.013847670250896057,
+      "lesion_voxels": 123632,
+      "mean_dice": 0.8991168141365051,
+      "mean_hd95_mm": 53.896647135416664,
+      "minimum_dice": 0.8929922580718994,
+      "seed_dice": [
+        0.8969927430152893,
+        0.9073654413223267,
+        0.8929922580718994
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        79,
+        97,
+        70
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_123",
+      "dice_population_sd": 0.006046101834917297,
+      "lesion_fraction": 0.015427531362007169,
+      "lesion_voxels": 137737,
+      "mean_dice": 0.8975972135861715,
+      "mean_hd95_mm": 5.227198441823323,
+      "minimum_dice": 0.8918375372886658,
+      "seed_dice": [
+        0.8918375372886658,
+        0.9059499502182007,
+        0.895004153251648
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        74,
+        94,
+        69
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_124",
+      "dice_population_sd": 0.0019457469028819154,
+      "lesion_fraction": 0.019641913082437276,
+      "lesion_voxels": 175363,
+      "mean_dice": 0.946726401646932,
+      "mean_hd95_mm": 3.2993599573771157,
+      "minimum_dice": 0.9439993500709534,
+      "seed_dice": [
+        0.9439993500709534,
+        0.9477716684341431,
+        0.9484081864356995
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        62,
+        107,
+        67
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_125",
+      "dice_population_sd": 0.010939584421708249,
+      "lesion_fraction": 0.016945004480286737,
+      "lesion_voxels": 151285,
+      "mean_dice": 0.932154655456543,
+      "mean_hd95_mm": 2.5618526140848794,
+      "minimum_dice": 0.9178376793861389,
+      "seed_dice": [
+        0.9443905353546143,
+        0.9178376793861389,
+        0.9342357516288757
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        39,
+        65,
+        49
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_128",
+      "dice_population_sd": 0.030450999874799843,
+      "lesion_fraction": 0.003859655017921147,
+      "lesion_voxels": 34459,
+      "mean_dice": 0.7704019149144491,
+      "mean_hd95_mm": 75.35983149210612,
+      "minimum_dice": 0.7330484986305237,
+      "seed_dice": [
+        0.7705196142196655,
+        0.807637631893158,
+        0.7330484986305237
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        55,
+        96,
+        74
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_130",
+      "dice_population_sd": 0.016139828246850917,
+      "lesion_fraction": 0.012513888888888889,
+      "lesion_voxels": 111724,
+      "mean_dice": 0.8671461741129557,
+      "mean_hd95_mm": 5.703156153361003,
+      "minimum_dice": 0.8497877717018127,
+      "seed_dice": [
+        0.8497877717018127,
+        0.8886610865592957,
+        0.8629896640777588
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        47,
+        63,
+        61
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_131",
+      "dice_population_sd": 0.02724607436712425,
+      "lesion_fraction": 0.007063284050179212,
+      "lesion_voxels": 63061,
+      "mean_dice": 0.8697551091512045,
+      "mean_hd95_mm": 64.96515146891277,
+      "minimum_dice": 0.8361079692840576,
+      "seed_dice": [
+        0.8361079692840576,
+        0.9028398394584656,
+        0.8703175187110901
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        63,
+        72,
+        73
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_133",
+      "dice_population_sd": 0.004816152210078205,
+      "lesion_fraction": 0.013516353046594981,
+      "lesion_voxels": 120674,
+      "mean_dice": 0.9397525389989217,
+      "mean_hd95_mm": 3.144659439722697,
+      "minimum_dice": 0.933190643787384,
+      "seed_dice": [
+        0.9446143507957458,
+        0.933190643787384,
+        0.9414526224136353
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        60,
+        80,
+        76
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_147",
+      "dice_population_sd": 0.033102279207551995,
+      "lesion_fraction": 0.015597782258064517,
+      "lesion_voxels": 139257,
+      "mean_dice": 0.38886446754137677,
+      "mean_hd95_mm": 67.31068166097005,
+      "minimum_dice": 0.36310482025146484,
+      "seed_dice": [
+        0.4355964958667755,
+        0.36310482025146484,
+        0.3678920865058899
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        81,
+        124,
+        80
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_149",
+      "dice_population_sd": 0.0031545781566788647,
+      "lesion_fraction": 0.02877184139784946,
+      "lesion_voxels": 256875,
+      "mean_dice": 0.8890535036722819,
+      "mean_hd95_mm": 6.328260739644368,
+      "minimum_dice": 0.8853722810745239,
+      "seed_dice": [
+        0.8853722810745239,
+        0.8887115716934204,
+        0.8930766582489014
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        48,
+        67,
+        55
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_179",
+      "dice_population_sd": 0.0027848398027221872,
+      "lesion_fraction": 0.007482302867383513,
+      "lesion_voxels": 66802,
+      "mean_dice": 0.9186608195304871,
+      "mean_hd95_mm": 4.531747182210286,
+      "minimum_dice": 0.9155498147010803,
+      "seed_dice": [
+        0.9223077893257141,
+        0.9155498147010803,
+        0.9181248545646667
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        79,
+        107,
+        72
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_183",
+      "dice_population_sd": 0.010082772123188349,
+      "lesion_fraction": 0.020862567204301075,
+      "lesion_voxels": 186261,
+      "mean_dice": 0.9496571024258932,
+      "mean_hd95_mm": 2.157378673553467,
+      "minimum_dice": 0.9359451532363892,
+      "seed_dice": [
+        0.9599013328552246,
+        0.9359451532363892,
+        0.9531248211860657
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        66,
+        118,
+        89
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_185",
+      "dice_population_sd": 0.008041268075494105,
+      "lesion_fraction": 0.00992932347670251,
+      "lesion_voxels": 88649,
+      "mean_dice": 0.8885069489479065,
+      "mean_hd95_mm": 30.75300407409668,
+      "minimum_dice": 0.878289520740509,
+      "seed_dice": [
+        0.8979395627975464,
+        0.8892917633056641,
+        0.878289520740509
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        61,
+        129,
+        68
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_186",
+      "dice_population_sd": 0.01286935582399019,
+      "lesion_fraction": 0.014543122759856631,
+      "lesion_voxels": 129841,
+      "mean_dice": 0.9216279983520508,
+      "mean_hd95_mm": 3.4490695794423423,
+      "minimum_dice": 0.9071994423866272,
+      "seed_dice": [
+        0.9071994423866272,
+        0.9384492039680481,
+        0.919235348701477
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        79,
+        101,
+        83
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_191",
+      "dice_population_sd": 0.006824471139891774,
+      "lesion_fraction": 0.016891241039426522,
+      "lesion_voxels": 150805,
+      "mean_dice": 0.9280691146850586,
+      "mean_hd95_mm": 3.7271293004353843,
+      "minimum_dice": 0.9186105728149414,
+      "seed_dice": [
+        0.9344603419303894,
+        0.9186105728149414,
+        0.931136429309845
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        60,
+        71,
+        72
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_202",
+      "dice_population_sd": 0.028145163027248715,
+      "lesion_fraction": 0.010888440860215053,
+      "lesion_voxels": 97212,
+      "mean_dice": 0.785318116346995,
+      "mean_hd95_mm": 90.31369018554688,
+      "minimum_dice": 0.7644149661064148,
+      "seed_dice": [
+        0.825104296207428,
+        0.7644149661064148,
+        0.7664350867271423
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        72,
+        85,
+        74
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_211",
+      "dice_population_sd": 0.045194010883524045,
+      "lesion_fraction": 0.008984991039426524,
+      "lesion_voxels": 80218,
+      "mean_dice": 0.7205693324406942,
+      "mean_hd95_mm": 8.033029397328695,
+      "minimum_dice": 0.6566696763038635,
+      "seed_dice": [
+        0.7536910772323608,
+        0.6566696763038635,
+        0.7513472437858582
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        60,
+        81,
+        60
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_214",
+      "dice_population_sd": 0.01141021973719439,
+      "lesion_fraction": 0.012344310035842293,
+      "lesion_voxels": 110210,
+      "mean_dice": 0.9392719268798828,
+      "mean_hd95_mm": 3.225266138712565,
+      "minimum_dice": 0.9269563555717468,
+      "seed_dice": [
+        0.9269563555717468,
+        0.9544593691825867,
+        0.9364000558853149
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        78,
+        92,
+        74
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_221",
+      "dice_population_sd": 0.00529086551628369,
+      "lesion_fraction": 0.01809554211469534,
+      "lesion_voxels": 161557,
+      "mean_dice": 0.9445911645889282,
+      "mean_hd95_mm": 5.698294957478841,
+      "minimum_dice": 0.937110424041748,
+      "seed_dice": [
+        0.9484685659408569,
+        0.937110424041748,
+        0.9481945037841797
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        77,
+        104,
+        79
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_225",
+      "dice_population_sd": 0.0012215980346717437,
+      "lesion_fraction": 0.02308848566308244,
+      "lesion_voxels": 206134,
+      "mean_dice": 0.9279106855392456,
+      "mean_hd95_mm": 29.384374618530273,
+      "minimum_dice": 0.9262536764144897,
+      "seed_dice": [
+        0.9262536764144897,
+        0.9291625022888184,
+        0.9283158779144287
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        91,
+        107,
+        57
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_227",
+      "dice_population_sd": 0.005087005644606896,
+      "lesion_fraction": 0.005924955197132617,
+      "lesion_voxels": 52898,
+      "mean_dice": 0.8309927980105082,
+      "mean_hd95_mm": 10.996689478556315,
+      "minimum_dice": 0.8241599202156067,
+      "seed_dice": [
+        0.8241599202156067,
+        0.8363586664199829,
+        0.8324598073959351
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        50,
+        80,
+        67
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_230",
+      "dice_population_sd": 0.0058877119732487935,
+      "lesion_fraction": 0.010163530465949821,
+      "lesion_voxels": 90740,
+      "mean_dice": 0.9516682028770447,
+      "mean_hd95_mm": 2.7303824424743652,
+      "minimum_dice": 0.9440012574195862,
+      "seed_dice": [
+        0.9440012574195862,
+        0.9583143591880798,
+        0.952688992023468
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        63,
+        90,
+        74
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_240",
+      "dice_population_sd": 0.015093526395065575,
+      "lesion_fraction": 0.01890076164874552,
+      "lesion_voxels": 168746,
+      "mean_dice": 0.8828107515970866,
+      "mean_hd95_mm": 4.633944511413574,
+      "minimum_dice": 0.864437460899353,
+      "seed_dice": [
+        0.9014068841934204,
+        0.864437460899353,
+        0.8825879096984863
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        78,
+        109,
+        79
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_243",
+      "dice_population_sd": 0.0026806153945297243,
+      "lesion_fraction": 0.017262320788530464,
+      "lesion_voxels": 154118,
+      "mean_dice": 0.904197633266449,
+      "mean_hd95_mm": 8.549176375071207,
+      "minimum_dice": 0.9004276990890503,
+      "seed_dice": [
+        0.9064279198646545,
+        0.9004276990890503,
+        0.9057372808456421
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        76,
+        92,
+        80
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_252",
+      "dice_population_sd": 0.009252748317215825,
+      "lesion_fraction": 0.022876568100358423,
+      "lesion_voxels": 204242,
+      "mean_dice": 0.943845788637797,
+      "mean_hd95_mm": 11.193294525146484,
+      "minimum_dice": 0.9323340058326721,
+      "seed_dice": [
+        0.9549895524978638,
+        0.9323340058326721,
+        0.9442138075828552
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        67,
+        113,
+        73
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_256",
+      "dice_population_sd": 0.007845790267279084,
+      "lesion_fraction": 0.019340613799283153,
+      "lesion_voxels": 172673,
+      "mean_dice": 0.9121317664782206,
+      "mean_hd95_mm": 37.27734820048014,
+      "minimum_dice": 0.901059091091156,
+      "seed_dice": [
+        0.9182857871055603,
+        0.901059091091156,
+        0.9170504212379456
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        90,
+        98,
+        80
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_261",
+      "dice_population_sd": 0.0033744957075513855,
+      "lesion_fraction": 0.027807683691756273,
+      "lesion_voxels": 248267,
+      "mean_dice": 0.9384574294090271,
+      "mean_hd95_mm": 3.4388749599456787,
+      "minimum_dice": 0.9338641166687012,
+      "seed_dice": [
+        0.9418752193450928,
+        0.9338641166687012,
+        0.9396329522132874
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        52,
+        79,
+        57
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_262",
+      "dice_population_sd": 0.06629123481521403,
+      "lesion_fraction": 0.007180443548387097,
+      "lesion_voxels": 64107,
+      "mean_dice": 0.6292683879534403,
+      "mean_hd95_mm": 80.80343627929688,
+      "minimum_dice": 0.575771152973175,
+      "seed_dice": [
+        0.5893437266349792,
+        0.7226902842521667,
+        0.575771152973175
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        39,
+        49,
+        44
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_269",
+      "dice_population_sd": 0.09452771850790175,
+      "lesion_fraction": 0.003969422043010752,
+      "lesion_voxels": 35439,
+      "mean_dice": 0.4848635494709015,
+      "mean_hd95_mm": 107.81868998209636,
+      "minimum_dice": 0.36518439650535583,
+      "seed_dice": [
+        0.49311912059783936,
+        0.5962871313095093,
+        0.36518439650535583
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        52,
+        68,
+        70
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_277",
+      "dice_population_sd": 0.055772246865624896,
+      "lesion_fraction": 0.0033683915770609317,
+      "lesion_voxels": 30073,
+      "mean_dice": 0.4700288275877635,
+      "mean_hd95_mm": 114.79651133219402,
+      "minimum_dice": 0.42619460821151733,
+      "seed_dice": [
+        0.5487326979637146,
+        0.43515917658805847,
+        0.42619460821151733
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        93,
+        62,
+        88
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_287",
+      "dice_population_sd": 0.04489250962075886,
+      "lesion_fraction": 0.005489471326164875,
+      "lesion_voxels": 49010,
+      "mean_dice": 0.789054274559021,
+      "mean_hd95_mm": 52.36036936442057,
+      "minimum_dice": 0.7469711303710938,
+      "seed_dice": [
+        0.7689283490180969,
+        0.8512633442878723,
+        0.7469711303710938
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        80,
+        101,
+        91
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_291",
+      "dice_population_sd": 0.016993243678437738,
+      "lesion_fraction": 0.024447020609318998,
+      "lesion_voxels": 218263,
+      "mean_dice": 0.9317886829376221,
+      "mean_hd95_mm": 13.787044207255045,
+      "minimum_dice": 0.9086409211158752,
+      "seed_dice": [
+        0.9489564299583435,
+        0.9086409211158752,
+        0.9377686977386475
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        54,
+        78,
+        59
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_292",
+      "dice_population_sd": 0.06793281306738812,
+      "lesion_fraction": 0.008626792114695341,
+      "lesion_voxels": 77020,
+      "mean_dice": 0.7523577809333801,
+      "mean_hd95_mm": 37.48985608418783,
+      "minimum_dice": 0.6590918898582458,
+      "seed_dice": [
+        0.8189508318901062,
+        0.6590918898582458,
+        0.7790306210517883
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        115,
+        125,
+        91
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_293",
+      "dice_population_sd": 0.0902074571344075,
+      "lesion_fraction": 0.033386536738351257,
+      "lesion_voxels": 298075,
+      "mean_dice": 0.5532190004984537,
+      "mean_hd95_mm": 32.88145065307617,
+      "minimum_dice": 0.42676252126693726,
+      "seed_dice": [
+        0.6310296654701233,
+        0.42676252126693726,
+        0.6018648147583008
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        39,
+        46,
+        39
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_295",
+      "dice_population_sd": 0.03446400476514201,
+      "lesion_fraction": 0.002832997311827957,
+      "lesion_voxels": 25293,
+      "mean_dice": 0.7613870700200399,
+      "mean_hd95_mm": 52.377569834391274,
+      "minimum_dice": 0.7216390371322632,
+      "seed_dice": [
+        0.7568331956863403,
+        0.8056889772415161,
+        0.7216390371322632
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        41,
+        63,
+        45
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_304",
+      "dice_population_sd": 0.021390222928023936,
+      "lesion_fraction": 0.003491263440860215,
+      "lesion_voxels": 31170,
+      "mean_dice": 0.8306717475255331,
+      "mean_hd95_mm": 5.7557400067647295,
+      "minimum_dice": 0.8006318211555481,
+      "seed_dice": [
+        0.8487762808799744,
+        0.8006318211555481,
+        0.8426071405410767
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        75,
+        103,
+        69
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_305",
+      "dice_population_sd": 0.06896363934235121,
+      "lesion_fraction": 0.014048051075268818,
+      "lesion_voxels": 125421,
+      "mean_dice": 0.7182090083758036,
+      "mean_hd95_mm": 8.921182632446289,
+      "minimum_dice": 0.6210514903068542,
+      "seed_dice": [
+        0.7594197392463684,
+        0.6210514903068542,
+        0.7741557955741882
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        92,
+        99,
+        76
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_308",
+      "dice_population_sd": 0.053891928124761755,
+      "lesion_fraction": 0.022673275089605736,
+      "lesion_voxels": 202427,
+      "mean_dice": 0.6924079060554504,
+      "mean_hd95_mm": 13.67468007405599,
+      "minimum_dice": 0.6167929768562317,
+      "seed_dice": [
+        0.7384795546531677,
+        0.6167929768562317,
+        0.7219511866569519
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        47,
+        56,
+        39
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_311",
+      "dice_population_sd": 0.08137471045499368,
+      "lesion_fraction": 0.0033963933691756273,
+      "lesion_voxels": 30323,
+      "mean_dice": 0.5140738586584727,
+      "mean_hd95_mm": 100.82488505045573,
+      "minimum_dice": 0.42318087816238403,
+      "seed_dice": [
+        0.4983924925327301,
+        0.620648205280304,
+        0.42318087816238403
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        60,
+        85,
+        58
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_319",
+      "dice_population_sd": 0.00668968875791722,
+      "lesion_fraction": 0.013104166666666667,
+      "lesion_voxels": 116994,
+      "mean_dice": 0.9095679521560669,
+      "mean_hd95_mm": 23.178784052530926,
+      "minimum_dice": 0.9036808013916016,
+      "seed_dice": [
+        0.9189251065254211,
+        0.9036808013916016,
+        0.906097948551178
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        62,
+        71,
+        57
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_322",
+      "dice_population_sd": 0.020796283793930788,
+      "lesion_fraction": 0.009803651433691756,
+      "lesion_voxels": 87527,
+      "mean_dice": 0.9324977596600851,
+      "mean_hd95_mm": 22.908581693967182,
+      "minimum_dice": 0.9114810824394226,
+      "seed_dice": [
+        0.9114810824394226,
+        0.9608232975006104,
+        0.9251888990402222
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        55,
+        78,
+        44
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_331",
+      "dice_population_sd": 0.05198806951619362,
+      "lesion_fraction": 0.005584453405017921,
+      "lesion_voxels": 49858,
+      "mean_dice": 0.7454977035522461,
+      "mean_hd95_mm": 14.738080024719238,
+      "minimum_dice": 0.6877824664115906,
+      "seed_dice": [
+        0.6877824664115906,
+        0.8137996196746826,
+        0.7349110245704651
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        49,
+        76,
+        78
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_336",
+      "dice_population_sd": 0.056727600766564426,
+      "lesion_fraction": 0.011762544802867383,
+      "lesion_voxels": 105016,
+      "mean_dice": 0.8456361691157023,
+      "mean_hd95_mm": 78.72897084554036,
+      "minimum_dice": 0.7856513261795044,
+      "seed_dice": [
+        0.829494059085846,
+        0.9217631220817566,
+        0.7856513261795044
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        28,
+        48,
+        29
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_341",
+      "dice_population_sd": 0.10256216573091652,
+      "lesion_fraction": 0.0013967293906810036,
+      "lesion_voxels": 12470,
+      "mean_dice": 0.5026777883370718,
+      "mean_hd95_mm": 78.91639200846355,
+      "minimum_dice": 0.4073362648487091,
+      "seed_dice": [
+        0.4073362648487091,
+        0.6450110673904419,
+        0.4556860327720642
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        60,
+        107,
+        67
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_343",
+      "dice_population_sd": 0.00042334683345960424,
+      "lesion_fraction": 0.017629928315412186,
+      "lesion_voxels": 157400,
+      "mean_dice": 0.9283978343009949,
+      "mean_hd95_mm": 4.802416642506917,
+      "minimum_dice": 0.9279552698135376,
+      "seed_dice": [
+        0.9279552698135376,
+        0.9289683103561401,
+        0.9282699227333069
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        85,
+        111,
+        68
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_351",
+      "dice_population_sd": 0.02503263930199529,
+      "lesion_fraction": 0.01108826164874552,
+      "lesion_voxels": 98996,
+      "mean_dice": 0.8282089829444885,
+      "mean_hd95_mm": 44.699971516927086,
+      "minimum_dice": 0.7977380752563477,
+      "seed_dice": [
+        0.8278369903564453,
+        0.8590518832206726,
+        0.7977380752563477
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        58,
+        101,
+        78
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_358",
+      "dice_population_sd": 0.0030569676838822202,
+      "lesion_fraction": 0.012089493727598566,
+      "lesion_voxels": 107935,
+      "mean_dice": 0.9006688992182413,
+      "mean_hd95_mm": 13.972562313079834,
+      "minimum_dice": 0.8971757292747498,
+      "seed_dice": [
+        0.8971757292747498,
+        0.9046213626861572,
+        0.9002096056938171
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        92,
+        75,
+        69
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_359",
+      "dice_population_sd": 0.05660207146448353,
+      "lesion_fraction": 0.009503248207885305,
+      "lesion_voxels": 84845,
+      "mean_dice": 0.7886154452959696,
+      "mean_hd95_mm": 79.35565948486328,
+      "minimum_dice": 0.7341263890266418,
+      "seed_dice": [
+        0.7650771141052246,
+        0.8666428327560425,
+        0.7341263890266418
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        105,
+        103,
+        82
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_367",
+      "dice_population_sd": 0.016976465942201896,
+      "lesion_fraction": 0.01418481182795699,
+      "lesion_voxels": 126642,
+      "mean_dice": 0.8675254980723063,
+      "mean_hd95_mm": 40.57575798034668,
+      "minimum_dice": 0.8535895943641663,
+      "seed_dice": [
+        0.8575628995895386,
+        0.8914240002632141,
+        0.8535895943641663
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        118,
+        159,
+        102
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_369",
+      "dice_population_sd": 0.021974222633699355,
+      "lesion_fraction": 0.02518279569892473,
+      "lesion_voxels": 224832,
+      "mean_dice": 0.8729061285654703,
+      "mean_hd95_mm": 43.09340286254883,
+      "minimum_dice": 0.8444668054580688,
+      "seed_dice": [
+        0.8979749083518982,
+        0.8762766718864441,
+        0.8444668054580688
+      ],
+      "size_quartile": 4
+    }
+  ],
+  "best_epochs": {
+    "20260812": 10,
+    "20260813": 7,
+    "20260814": 7
+  },
+  "case_count": 65,
+  "consistent_failures": {
+    "below_0.60_in_all_seeds": 4,
+    "below_0.70_in_all_seeds": 9
+  },
+  "evaluation_scope": "internal validation only; used to choose the next pilot experiment",
+  "highest_variance_10_cases": [
+    {
+      "bounding_box": [
+        33,
+        91,
+        43
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_102",
+      "dice_population_sd": 0.11140758018818336,
+      "lesion_fraction": 0.0027041890681003583,
+      "lesion_voxels": 24143,
+      "mean_dice": 0.5139180322488149,
+      "mean_hd95_mm": 83.83782704671223,
+      "minimum_dice": 0.4173552095890045,
+      "seed_dice": [
+        0.454383909702301,
+        0.6700149774551392,
+        0.4173552095890045
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        28,
+        48,
+        29
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_341",
+      "dice_population_sd": 0.10256216573091652,
+      "lesion_fraction": 0.0013967293906810036,
+      "lesion_voxels": 12470,
+      "mean_dice": 0.5026777883370718,
+      "mean_hd95_mm": 78.91639200846355,
+      "minimum_dice": 0.4073362648487091,
+      "seed_dice": [
+        0.4073362648487091,
+        0.6450110673904419,
+        0.4556860327720642
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        39,
+        49,
+        44
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_269",
+      "dice_population_sd": 0.09452771850790175,
+      "lesion_fraction": 0.003969422043010752,
+      "lesion_voxels": 35439,
+      "mean_dice": 0.4848635494709015,
+      "mean_hd95_mm": 107.81868998209636,
+      "minimum_dice": 0.36518439650535583,
+      "seed_dice": [
+        0.49311912059783936,
+        0.5962871313095093,
+        0.36518439650535583
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        115,
+        125,
+        91
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_293",
+      "dice_population_sd": 0.0902074571344075,
+      "lesion_fraction": 0.033386536738351257,
+      "lesion_voxels": 298075,
+      "mean_dice": 0.5532190004984537,
+      "mean_hd95_mm": 32.88145065307617,
+      "minimum_dice": 0.42676252126693726,
+      "seed_dice": [
+        0.6310296654701233,
+        0.42676252126693726,
+        0.6018648147583008
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        47,
+        56,
+        39
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_311",
+      "dice_population_sd": 0.08137471045499368,
+      "lesion_fraction": 0.0033963933691756273,
+      "lesion_voxels": 30323,
+      "mean_dice": 0.5140738586584727,
+      "mean_hd95_mm": 100.82488505045573,
+      "minimum_dice": 0.42318087816238403,
+      "seed_dice": [
+        0.4983924925327301,
+        0.620648205280304,
+        0.42318087816238403
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        54,
+        110,
+        82
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_074",
+      "dice_population_sd": 0.06943126450842899,
+      "lesion_fraction": 0.008600918458781363,
+      "lesion_voxels": 76789,
+      "mean_dice": 0.5752958655357361,
+      "mean_hd95_mm": 77.98875172932942,
+      "minimum_dice": 0.5077402591705322,
+      "seed_dice": [
+        0.6707845330238342,
+        0.5077402591705322,
+        0.5473628044128418
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        75,
+        103,
+        69
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_305",
+      "dice_population_sd": 0.06896363934235121,
+      "lesion_fraction": 0.014048051075268818,
+      "lesion_voxels": 125421,
+      "mean_dice": 0.7182090083758036,
+      "mean_hd95_mm": 8.921182632446289,
+      "minimum_dice": 0.6210514903068542,
+      "seed_dice": [
+        0.7594197392463684,
+        0.6210514903068542,
+        0.7741557955741882
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        54,
+        78,
+        59
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_292",
+      "dice_population_sd": 0.06793281306738812,
+      "lesion_fraction": 0.008626792114695341,
+      "lesion_voxels": 77020,
+      "mean_dice": 0.7523577809333801,
+      "mean_hd95_mm": 37.48985608418783,
+      "minimum_dice": 0.6590918898582458,
+      "seed_dice": [
+        0.8189508318901062,
+        0.6590918898582458,
+        0.7790306210517883
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        52,
+        79,
+        57
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_262",
+      "dice_population_sd": 0.06629123481521403,
+      "lesion_fraction": 0.007180443548387097,
+      "lesion_voxels": 64107,
+      "mean_dice": 0.6292683879534403,
+      "mean_hd95_mm": 80.80343627929688,
+      "minimum_dice": 0.575771152973175,
+      "seed_dice": [
+        0.5893437266349792,
+        0.7226902842521667,
+        0.575771152973175
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        44,
+        47,
+        53
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_081",
+      "dice_population_sd": 0.06137889707011846,
+      "lesion_fraction": 0.003531810035842294,
+      "lesion_voxels": 31532,
+      "mean_dice": 0.7766611576080322,
+      "mean_hd95_mm": 70.7414321899414,
+      "minimum_dice": 0.7068320512771606,
+      "seed_dice": [
+        0.7669217586517334,
+        0.8562296628952026,
+        0.7068320512771606
+      ],
+      "size_quartile": 1
+    }
+  ],
+  "lesion_size_analysis": {
+    "mean_dice_by_size_quartile": {
+      "1": 0.69222677188615,
+      "2": 0.8223307840526104,
+      "3": 0.8629061772177616,
+      "4": 0.8736060588967566
+    },
+    "quartile_boundaries_voxels": [
+      52898.0,
+      111724.0,
+      154118.0
+    ],
+    "spearman_log_volume_vs_mean_dice": {
+      "p_value": 2.1679556923456043e-06,
+      "rho": 0.5491695804195804
+    }
+  },
+  "runs": [
+    "runs/glioma-pilot-full-v3-batch4--cuda--brats--20260812--e10",
+    "runs/glioma-pilot-full-v3-batch4--cuda--brats--20260813--e10",
+    "runs/glioma-pilot-full-v3-batch4--cuda--brats--20260814--e10"
+  ],
+  "schema_version": 1,
+  "study": "data/manifests/glioma.pilot.full.v3.batch4.json",
+  "worst_15_cases": [
+    {
+      "bounding_box": [
+        60,
+        80,
+        76
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_147",
+      "dice_population_sd": 0.033102279207551995,
+      "lesion_fraction": 0.015597782258064517,
+      "lesion_voxels": 139257,
+      "mean_dice": 0.38886446754137677,
+      "mean_hd95_mm": 67.31068166097005,
+      "minimum_dice": 0.36310482025146484,
+      "seed_dice": [
+        0.4355964958667755,
+        0.36310482025146484,
+        0.3678920865058899
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        52,
+        68,
+        70
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_277",
+      "dice_population_sd": 0.055772246865624896,
+      "lesion_fraction": 0.0033683915770609317,
+      "lesion_voxels": 30073,
+      "mean_dice": 0.4700288275877635,
+      "mean_hd95_mm": 114.79651133219402,
+      "minimum_dice": 0.42619460821151733,
+      "seed_dice": [
+        0.5487326979637146,
+        0.43515917658805847,
+        0.42619460821151733
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        39,
+        49,
+        44
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_269",
+      "dice_population_sd": 0.09452771850790175,
+      "lesion_fraction": 0.003969422043010752,
+      "lesion_voxels": 35439,
+      "mean_dice": 0.4848635494709015,
+      "mean_hd95_mm": 107.81868998209636,
+      "minimum_dice": 0.36518439650535583,
+      "seed_dice": [
+        0.49311912059783936,
+        0.5962871313095093,
+        0.36518439650535583
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        28,
+        48,
+        29
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_341",
+      "dice_population_sd": 0.10256216573091652,
+      "lesion_fraction": 0.0013967293906810036,
+      "lesion_voxels": 12470,
+      "mean_dice": 0.5026777883370718,
+      "mean_hd95_mm": 78.91639200846355,
+      "minimum_dice": 0.4073362648487091,
+      "seed_dice": [
+        0.4073362648487091,
+        0.6450110673904419,
+        0.4556860327720642
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        33,
+        91,
+        43
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_102",
+      "dice_population_sd": 0.11140758018818336,
+      "lesion_fraction": 0.0027041890681003583,
+      "lesion_voxels": 24143,
+      "mean_dice": 0.5139180322488149,
+      "mean_hd95_mm": 83.83782704671223,
+      "minimum_dice": 0.4173552095890045,
+      "seed_dice": [
+        0.454383909702301,
+        0.6700149774551392,
+        0.4173552095890045
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        47,
+        56,
+        39
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_311",
+      "dice_population_sd": 0.08137471045499368,
+      "lesion_fraction": 0.0033963933691756273,
+      "lesion_voxels": 30323,
+      "mean_dice": 0.5140738586584727,
+      "mean_hd95_mm": 100.82488505045573,
+      "minimum_dice": 0.42318087816238403,
+      "seed_dice": [
+        0.4983924925327301,
+        0.620648205280304,
+        0.42318087816238403
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        43,
+        63,
+        91
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_110",
+      "dice_population_sd": 0.04809675156313398,
+      "lesion_fraction": 0.0017654569892473118,
+      "lesion_voxels": 15762,
+      "mean_dice": 0.5395686626434326,
+      "mean_hd95_mm": 43.95628865559896,
+      "minimum_dice": 0.47518569231033325,
+      "seed_dice": [
+        0.5527582764625549,
+        0.5907620191574097,
+        0.47518569231033325
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        115,
+        125,
+        91
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_293",
+      "dice_population_sd": 0.0902074571344075,
+      "lesion_fraction": 0.033386536738351257,
+      "lesion_voxels": 298075,
+      "mean_dice": 0.5532190004984537,
+      "mean_hd95_mm": 32.88145065307617,
+      "minimum_dice": 0.42676252126693726,
+      "seed_dice": [
+        0.6310296654701233,
+        0.42676252126693726,
+        0.6018648147583008
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        54,
+        110,
+        82
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_074",
+      "dice_population_sd": 0.06943126450842899,
+      "lesion_fraction": 0.008600918458781363,
+      "lesion_voxels": 76789,
+      "mean_dice": 0.5752958655357361,
+      "mean_hd95_mm": 77.98875172932942,
+      "minimum_dice": 0.5077402591705322,
+      "seed_dice": [
+        0.6707845330238342,
+        0.5077402591705322,
+        0.5473628044128418
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        52,
+        79,
+        57
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_262",
+      "dice_population_sd": 0.06629123481521403,
+      "lesion_fraction": 0.007180443548387097,
+      "lesion_voxels": 64107,
+      "mean_dice": 0.6292683879534403,
+      "mean_hd95_mm": 80.80343627929688,
+      "minimum_dice": 0.575771152973175,
+      "seed_dice": [
+        0.5893437266349792,
+        0.7226902842521667,
+        0.575771152973175
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        92,
+        99,
+        76
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_308",
+      "dice_population_sd": 0.053891928124761755,
+      "lesion_fraction": 0.022673275089605736,
+      "lesion_voxels": 202427,
+      "mean_dice": 0.6924079060554504,
+      "mean_hd95_mm": 13.67468007405599,
+      "minimum_dice": 0.6167929768562317,
+      "seed_dice": [
+        0.7384795546531677,
+        0.6167929768562317,
+        0.7219511866569519
+      ],
+      "size_quartile": 4
+    },
+    {
+      "bounding_box": [
+        75,
+        103,
+        69
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_305",
+      "dice_population_sd": 0.06896363934235121,
+      "lesion_fraction": 0.014048051075268818,
+      "lesion_voxels": 125421,
+      "mean_dice": 0.7182090083758036,
+      "mean_hd95_mm": 8.921182632446289,
+      "minimum_dice": 0.6210514903068542,
+      "seed_dice": [
+        0.7594197392463684,
+        0.6210514903068542,
+        0.7741557955741882
+      ],
+      "size_quartile": 3
+    },
+    {
+      "bounding_box": [
+        72,
+        85,
+        74
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_211",
+      "dice_population_sd": 0.045194010883524045,
+      "lesion_fraction": 0.008984991039426524,
+      "lesion_voxels": 80218,
+      "mean_dice": 0.7205693324406942,
+      "mean_hd95_mm": 8.033029397328695,
+      "minimum_dice": 0.6566696763038635,
+      "seed_dice": [
+        0.7536910772323608,
+        0.6566696763038635,
+        0.7513472437858582
+      ],
+      "size_quartile": 2
+    },
+    {
+      "bounding_box": [
+        55,
+        78,
+        44
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_331",
+      "dice_population_sd": 0.05198806951619362,
+      "lesion_fraction": 0.005584453405017921,
+      "lesion_voxels": 49858,
+      "mean_dice": 0.7454977035522461,
+      "mean_hd95_mm": 14.738080024719238,
+      "minimum_dice": 0.6877824664115906,
+      "seed_dice": [
+        0.6877824664115906,
+        0.8137996196746826,
+        0.7349110245704651
+      ],
+      "size_quartile": 1
+    },
+    {
+      "bounding_box": [
+        54,
+        78,
+        59
+      ],
+      "case_id": "brats2020_kaggle:BraTS20_Training_292",
+      "dice_population_sd": 0.06793281306738812,
+      "lesion_fraction": 0.008626792114695341,
+      "lesion_voxels": 77020,
+      "mean_dice": 0.7523577809333801,
+      "mean_hd95_mm": 37.48985608418783,
+      "minimum_dice": 0.6590918898582458,
+      "seed_dice": [
+        0.8189508318901062,
+        0.6590918898582458,
+        0.7790306210517883
+      ],
+      "size_quartile": 2
+    }
+  ]
+}

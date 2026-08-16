@@ -2,10 +2,16 @@
 
 Status: in progress.
 
-- Completed AMD one-epoch BraTS-only runs: seeds `20260812` and `20260814`.
-  They are engineering checks only and are excluded from the scientific study.
-- CUDA is assigned the independent `20260813` seed after resumable data synchronization.
+- Completed CUDA one-epoch BraTS-only engineering pilot: seed `20260813`, with
+  263 locally available QC-passing cases and 43 internal validation cases.
+  It is excluded from the scientific study.
+- CUDA owns every CNN pilot and every frozen-study arm.
 - Next acceptance point: three 10-epoch BraTS-only learning curves with runtime, checkpoint, telemetry, and internal-validation records.
 - These are engineering pilots, not external-performance results.
-- All subsequent CNN study jobs run on CUDA; AMD is reserved for the bounded
-  language layer after its GPU check passes.
+- AMD is reserved for the bounded language layer after its GPU check passes.
+
+Monitor an active CUDA curve without modifying it:
+
+```bash
+brain-mri-data monitor
+```

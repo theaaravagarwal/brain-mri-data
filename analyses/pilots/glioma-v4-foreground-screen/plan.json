@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "status": "predeclared_before_screening",
+  "evaluation_scope": "single-seed internal-validation screen only",
+  "hypothesis": "Forcing some training patches to contain a positive lesion chunk will improve the smallest-lesion quartile without materially reducing overall Dice.",
+  "evidence": {
+    "smallest_lesion_quartile_mean_dice": 0.69222677188615,
+    "largest_lesion_quartile_mean_dice": 0.8736060588967566,
+    "spearman_log_lesion_volume_vs_mean_dice_rho": 0.5491695804195804,
+    "spearman_p_value": 2.1679556923456043e-06,
+    "cases_below_0.60_in_all_three_baseline_seeds": 4
+  },
+  "constants": {
+    "seed": 20260812,
+    "epochs": 10,
+    "patch_size": [80, 80, 80],
+    "microbatch_size": 4,
+    "effective_batch_size": 4,
+    "model": "monai_segresnet_init_filters_32",
+    "data_split": "glioma-pilot-v3-development-split"
+  },
+  "variants": [
+    {"id": "fg25", "foreground_probability": 0.25},
+    {"id": "fg50", "foreground_probability": 0.50},
+    {"id": "fg75", "foreground_probability": 0.75}
+  ],
+  "screen_gate": {
+    "smallest_quartile_mean_dice_delta_minimum": 0.02,
+    "overall_mean_dice_delta_minimum": -0.005
+  },
+  "decision_policy": "Generate flags only. Stop after all three variants and require human review before any confirmation seeds or promotion."
+}

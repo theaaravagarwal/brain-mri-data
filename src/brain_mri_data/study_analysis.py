@@ -50,7 +50,10 @@ def _load_result(path: Path, study_id: str) -> tuple[dict[str, Any], dict[str, f
         scores[item["case_id"]] = float(item["whole_lesion_dice"])
     if not scores:
         raise ValueError(f"{path} has no external cases")
-    for key in ("profile_id", "arm", "seed"):
+    for key in (
+        "profile_id", "arm", "seed", "study_sha256", "profile_sha256",
+        "trainer_sha256", "pamc_sha256", "evaluation_sha256",
+    ):
         if key not in run:
             raise ValueError(f"{path} run metadata lacks {key}")
     return run, scores
@@ -84,10 +87,18 @@ def analyze_study(plan_path: Path, result_paths: list[Path], destination: Path) 
     if destination.exists():
         raise FileExistsError(f"Refusing to overwrite analysis artifact: {destination}")
     grouped: dict[str, dict[str, dict[int, dict[str, float]]]] = {}
+    provenance_by_profile: dict[str, dict[str, str]] = {}
     input_hashes: dict[str, str] = {}
     for path in result_paths:
         run, scores = _load_result(path, plan["study_id"])
         profile, arm, seed = str(run["profile_id"]), str(run["arm"]), int(run["seed"])
+        provenance = {
+            key: str(run[key])
+            for key in ("study_sha256", "profile_sha256", "trainer_sha256", "pamc_sha256", "evaluation_sha256")
+        }
+        previous = provenance_by_profile.setdefault(profile, provenance)
+        if previous != provenance:
+            raise ValueError(f"{profile} results do not share one locked study, profile, and evaluation code")
         target = grouped.setdefault(profile, {}).setdefault(arm, {})
         if seed in target:
             raise ValueError(f"Duplicate output for profile={profile}, arm={arm}, seed={seed}")

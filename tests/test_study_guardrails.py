@@ -3,10 +3,11 @@ from __future__ import annotations
 import tempfile
 import unittest
 import json
+import copy
 from pathlib import Path
 
 from brain_mri_data.catalog import load_catalog
-from brain_mri_data.study import build_study_manifest
+from brain_mri_data.study import _approved_manual_provenance_review, build_study_manifest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +20,21 @@ class StudyGuardrailTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             with self.assertRaisesRegex(ValueError, "manual_provenance_review"):
                 build_study_manifest(load_catalog(), STUDY, Path(temporary), Path(temporary) / "locked.json")
+
+    def test_manual_review_needs_attributable_dated_evidence(self) -> None:
+        study = {"manual_provenance_review": {
+            "status": "approved", "reviewer": "reviewer", "completed_at_utc": "2026-08-15T12:00:00Z", "evidence": "audit-notes.md",
+        }}
+        self.assertEqual(_approved_manual_provenance_review(study)["reviewer"], "reviewer")
+        for field in ("reviewer", "completed_at_utc", "evidence"):
+            invalid = copy.deepcopy(study)
+            invalid["manual_provenance_review"][field] = ""
+            with self.assertRaisesRegex(ValueError, field):
+                _approved_manual_provenance_review(invalid)
+        invalid = copy.deepcopy(study)
+        invalid["manual_provenance_review"]["completed_at_utc"] = "2026-08-15"
+        with self.assertRaisesRegex(ValueError, "timezone"):
+            _approved_manual_provenance_review(invalid)
 
     def test_internal_pilot_locks_without_an_external_claim(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

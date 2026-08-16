@@ -9,6 +9,10 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 
+# Local agent handoff and session state
+.agentstate-relay/
+handoff.md
+
 # Dataset material and generated manifests: never commit medical images
 data/**
 !data/.gitkeep

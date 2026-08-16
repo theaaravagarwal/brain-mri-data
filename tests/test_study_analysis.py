@@ -15,7 +15,13 @@ PLAN = ROOT / "config" / "analysis" / "glioma.yaml"
 def result(profile: str, arm: str, seed: int, first: float, second: float) -> dict:
     return {
         "schema_version": 1,
-        "run": {"study_id": "glioma", "evaluation_status": "external_test_locked", "profile_id": profile, "arm": arm, "seed": seed},
+        "run": {
+            "study_id": "glioma", "evaluation_status": "external_test_locked",
+            "profile_id": profile, "arm": arm, "seed": seed,
+            "study_sha256": "study", "profile_sha256": "profile",
+            "trainer_sha256": "trainer", "pamc_sha256": "pamc",
+            "evaluation_sha256": "evaluation",
+        },
         "external_clean": {"per_case": [
             {"case_id": "external:a", "whole_lesion_dice": first},
             {"case_id": "external:b", "whole_lesion_dice": second},
@@ -53,4 +59,19 @@ class StudyAnalysisTests(unittest.TestCase):
                     path.write_text(json.dumps(result("cuda", arm, seed, 0.6, 0.5)))
                     paths.append(path)
             with self.assertRaisesRegex(ValueError, "frozen analysis seeds"):
+                analyze_study(PLAN, paths, root / "analysis.json")
+
+    def test_mixed_code_or_study_provenance_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            paths = []
+            for arm in ("brats", "pooled", "pamc"):
+                for seed in (20260812, 20260813, 20260814):
+                    payload = result("cuda", arm, seed, 0.6, 0.5)
+                    if arm == "pamc" and seed == 20260814:
+                        payload["run"]["trainer_sha256"] = "different-trainer"
+                    path = root / f"cuda-{arm}-{seed}.json"
+                    path.write_text(json.dumps(payload))
+                    paths.append(path)
+            with self.assertRaisesRegex(ValueError, "locked study, profile, and evaluation code"):
                 analyze_study(PLAN, paths, root / "analysis.json")

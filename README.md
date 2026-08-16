@@ -39,7 +39,8 @@ it must not run frozen CNN study arms.
 
 See [the AMD ROCm setup guide](docs/amd-rocm-setup.md) and
 [the NVIDIA CUDA setup guide](docs/cuda-setup.md) for host checks and
-verification.
+verification. The canonical SSH targets, repository paths, workload roles, and
+restart safety rules are recorded in [the compute-host runbook](docs/compute-hosts.md).
 
 Kaggle access requires `~/.kaggle/kaggle.json` or `KAGGLE_*` credentials.
 Hugging Face access requires `huggingface-cli login` for gated repos.
@@ -149,12 +150,26 @@ PAMC is the research contribution: it combines source-adversarial features
 with a consistency loss after one MRI sequence is intentionally masked. It is
 evaluated on a locked external cohort both with all four sequences and under
 the controlled masking condition; it is not a diagnosis system or an LLM.
-# Concurrent pilot runs
+# CUDA pilot run
 
-The completed AMD checks are engineering pilots only. Use CUDA for the active
-pilot curve; do not start a second AMD CNN pilot.
+Use CUDA for every CNN pilot and frozen CNN study run. The AMD worker is not a
+CNN fallback.
 
 ```bash
 # CUDA worker: resumably copy only BraTS 2020, then run seed 20260813
 ./scripts/sync_cuda_pilot.sh
 ```
+
+For a live CUDA health/telemetry view, run:
+
+```bash
+brain-mri-data monitor
+
+# Noninteractive or script-friendly snapshots:
+brain-mri-data monitor --once
+brain-mri-data monitor --json --once
+```
+
+For runs started after the live-progress update, the dashboard also shows the
+current training/validation phase, epoch, batch or case count, running loss,
+and elapsed epoch time. The training pane itself uses `tqdm` progress bars.

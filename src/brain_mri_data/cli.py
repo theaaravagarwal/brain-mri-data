@@ -15,6 +15,7 @@ from .study_analysis import analyze_study
 from .run_matrix import claim_run, expand_matrix
 from .language_bench import score_evidence, score_planner, score_structured
 from .language_gateway import build_explainer_prompt, load_language_policy, validate_job_proposal, validate_result_envelope
+from .monitor import main as monitor_main, parser_arguments as monitor_parser_arguments
 
 
 def paths(args: argparse.Namespace) -> tuple[Path, Path]:
@@ -34,6 +35,8 @@ def main() -> None:
     index = sub.add_parser("index"); index.add_argument("source_id")
     discover = sub.add_parser("discover"); discover.add_argument("source_id")
     validate = sub.add_parser("validate"); validate.add_argument("source_id")
+    monitor = sub.add_parser("monitor", help="interactive CUDA training monitor")
+    monitor_parser_arguments(monitor)
     verify = sub.add_parser("verify-files", help="verify manifest file hashes without re-indexing")
     verify.add_argument("source_id")
     split = sub.add_parser("split"); split.add_argument("source_id"); split.add_argument("--seed", type=int, required=True)
@@ -77,6 +80,8 @@ def main() -> None:
     raw_root, manifest_root = paths(args)
     if args.command == "catalog":
         print(json.dumps(catalog, indent=2, sort_keys=True)); return
+    if args.command == "monitor":
+        monitor_main(args); return
     if args.command == "fetch-auto":
         try:
             results = fetch_automatic(catalog, raw_root, args.dry_run, args.only)

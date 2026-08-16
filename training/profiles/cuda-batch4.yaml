@@ -1,13 +1,13 @@
 schema_version: 1
-profile_id: cuda
+profile_id: cuda-batch4
 accelerator: cuda
 expected_gpu_name_contains: RTX 3060
 mixed_precision: fp16
-batch_size: 1
+batch_size: 4
 effective_batch_size: 4
 num_workers: 8
 prefetch_factor: 2
 persistent_workers: true
 pin_memory: true
 patch_size: [80, 80, 80]
-notes: RTX 3060, 12 GB VRAM; measured 8-worker/2-prefetch pipeline keeps NIfTI decode off the GPU critical path with less queue memory
+notes: Measured RTX 3060 chunk-cache winner; batch 4 leaves about 5.6 GiB VRAM headroom and validation remains batch 1
