@@ -8,6 +8,11 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+build/
+dist/
 
 # Local agent handoff and session state
 .agentstate-relay/
@@ -38,6 +43,12 @@ wandb/
 *.ckpt
 *.onnx
 .wheelhouse/
+*.partial
+*.log
+
+# Local agent/runtime state
+.agentstate-relay/
+.runtime/
 
 # Credentials and local configuration
 .env

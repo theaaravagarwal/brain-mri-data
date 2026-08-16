@@ -1,0 +1,13 @@
+[Unit]
+Description=Explain validated Brain MRI research summaries
+After=ollama.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/brain-mri-data
+ExecStart=/usr/bin/flock -n %t/brain-mri-language-consume.lock %h/brain-mri-data/.venv/bin/brain-mri-data language consume-inbox --inbox %h/brain-mri-data/runs/language-inbox
+Nice=10
+CPUWeight=25
+
+[Install]
+WantedBy=default.target

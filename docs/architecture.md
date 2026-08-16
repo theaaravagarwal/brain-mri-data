@@ -30,8 +30,12 @@ The RTX 3060 trains every frozen CNN `(arm, seed)` job. The AMD worker must not
 run CNN study arms: it is reserved for the separately evaluated, constrained
 research-language layer and never accesses images or clinical decisions. The
 controller locks manifests and claims, while workers retain their own legal
-local raw-data copy. Synchronize only configs, metrics, checkpoints, and
-non-identifying prediction artifacts over Tailscale.
+local raw-data copy. The language boundary is narrower than general experiment
+synchronization: NVIDIA constructs a strict aggregate-only research envelope
+and pushes it one-way to AMD; AMD has no access to MRI data, paths, case-level
+results, or NVIDIA credentials. The AMD planner sees only a validated status
+snapshot intersected with the frozen run matrix, and can emit only a
+non-executing proposal for human review.
 
 The importer environment has no training framework. Use `uv sync --extra cuda`
 or `uv sync --extra amd` in a separate Python 3.12 environment, never both.

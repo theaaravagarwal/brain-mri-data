@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch for validated Brain MRI language envelopes
+
+[Path]
+DirectoryNotEmpty=%h/brain-mri-data/runs/language-inbox/ready
+Unit=brain-mri-language-consume.service
+
+[Install]
+WantedBy=default.target

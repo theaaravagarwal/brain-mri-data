@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "jobs": [
+    {"run_id": "glioma--cuda--brats--20260812", "profile": "cuda", "state": "unavailable"},
+    {"run_id": "glioma--cuda--brats--20260813", "profile": "cuda", "state": "unavailable"},
+    {"run_id": "glioma--cuda--brats--20260814", "profile": "cuda", "state": "unavailable"},
+    {"run_id": "glioma--cuda--pooled--20260812", "profile": "cuda", "state": "unavailable"},
+    {"run_id": "glioma--cuda--pooled--20260813", "profile": "cuda", "state": "unavailable"},
+    {"run_id": "glioma--cuda--pooled--20260814", "profile": "cuda", "state": "unavailable"},
+    {"run_id": "glioma--cuda--pamc--20260812", "profile": "cuda", "state": "unavailable"},
+    {"run_id": "glioma--cuda--pamc--20260813", "profile": "cuda", "state": "unavailable"},
+    {"run_id": "glioma--cuda--pamc--20260814", "profile": "cuda", "state": "unavailable"}
+  ]
+}

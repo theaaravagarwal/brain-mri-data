@@ -71,4 +71,10 @@ done
   "runs/glioma-pilot-v4-fg50--cuda--brats--${SEED}--e${EPOCHS}" \
   "runs/glioma-pilot-v4-fg75--cuda--brats--${SEED}--e${EPOCHS}"
 
+if [[ -f runs/language-transport/brain_mri_language_ed25519 ]]; then
+  scripts/export_and_push_foreground_summary.sh
+else
+  echo "Restricted language-transfer key is absent; aggregate export remains pending" >&2
+fi
+
 echo "$(date -Is) foreground screen complete; stop for human review: $OUTPUT_ROOT/results.md"

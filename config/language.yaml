@@ -8,5 +8,9 @@ roles:
     allowed_tools: [read_validated_result, search_evidence]
 safety:
   allowed_protocols: [glioma_4seq_v1]
+  allowed_artifact_kinds: [cnn_research_run_summary, research_job_status]
+  maximum_envelope_bytes: 262144
+  transfer_direction: nvidia_push_to_amd
+  automatic_execution: false
   forbidden_capabilities: [raw_image_access, model_routing, diagnosis, treatment, patient_specific_advice]
   required_disclaimer: Research output only; not a diagnosis or treatment recommendation.

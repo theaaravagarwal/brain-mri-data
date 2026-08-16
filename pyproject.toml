@@ -7,7 +7,12 @@ name = "brain-mri-data"
 version = "0.1.0"
 description = "Provenance-first four-sequence brain MRI dataset aggregator"
 requires-python = ">=3.12,<3.13"
-dependencies = ["PyYAML>=6.0", "huggingface_hub>=0.25", "kagglehub>=0.3"]
+dependencies = [
+  "PyYAML>=6.0",
+  "huggingface_hub>=0.25",
+  "kagglehub>=0.3",
+  "pydantic>=2.12,<3",
+]
 
 [project.optional-dependencies]
 qc = ["nibabel>=5.2", "numpy>=1.26"]

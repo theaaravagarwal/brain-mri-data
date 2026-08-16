@@ -114,6 +114,12 @@ labelled research explanation. It must not select the diagnostic model, inspect
 raw images, override a result, or make treatment claims. Model routing should
 be deterministic from the protocol (`glioma_4seq_v1`), not agentic.
 
+The first language prototype is aggregate-only: a completed NVIDIA research
+screen is exported as strict canonical JSON, pushed one-way to the AMD worker,
+validated again, and explained by local Ollama. Individual MRI cases and paths
+never cross this boundary. See [Phase 04](docs/phases/04-language-layer.md) for
+the contract, commands, automation, and human-review gate.
+
 See `docs/architecture.md` for the training path and `docs/data-plan.md` for
 the project plan. See `docs/multitumor-scope-audit.md` for the consequences of
 expanding beyond glioma.
