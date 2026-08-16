@@ -34,7 +34,7 @@ processed / zero quarantined. Ollama reported 100% GPU for both tested models.
 
 | Gate | Result | Evidence |
 | --- | ---: | --- |
-| Full repository unit suite on AMD | 60/60 | Current ROCm environment |
+| Full repository unit suite on AMD | 63/63 | Final integrated ROCm environment |
 | New deterministic language tests | 29/29 | Strict schemas, allowlist export, transport, replay, evidence, and authorization |
 | Frozen v2 structured explainer | 6/6 | SHA-256 `ff9f9382c7def3d6dc0486fc25a15d6dac39936819c1acfaf0b1a72a6801854e` |
 | Frozen v2 evidence answers | 8/8 | SHA-256 `b5d87f5f94fc3f1b25323c1e33be40a246de9fc4cabbb82ad4c3395656b6628a` |
