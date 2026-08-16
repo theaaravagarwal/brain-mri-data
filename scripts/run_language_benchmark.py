@@ -11,6 +11,53 @@ from urllib.request import Request, urlopen
 from brain_mri_data.language_bench import read_jsonl, score_evidence, score_structured
 from brain_mri_data.language_gateway import build_explainer_prompt
 
+STRUCTURED_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "disclaimer": {
+            "type": "string",
+            "const": "Research output only; not a diagnosis or treatment recommendation.",
+        },
+        "summary": {"type": "string"},
+        "evidence": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "field": {
+                        "type": "string",
+                        "enum": [
+                            "input_qc.status",
+                            "segmentation.status",
+                            "segmentation.whole_lesion_dice",
+                            "provenance.source_id",
+                        ],
+                    },
+                    "value": {
+                        "type": ["string", "number", "boolean", "null"],
+                    },
+                },
+                "required": ["field", "value"],
+                "additionalProperties": False,
+            },
+        },
+        "limitations": {"type": "string"},
+        "abstained": {"type": "boolean"},
+    },
+    "required": ["disclaimer", "summary", "evidence", "limitations", "abstained"],
+    "additionalProperties": False,
+}
+
+EVIDENCE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "answer": {"type": "string"},
+        "citations": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["answer", "citations"],
+    "additionalProperties": False,
+}
+
 
 def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -24,10 +71,18 @@ def arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def ask(host: str, model: str, prompt: str) -> dict:
+def ask(host: str, model: str, prompt: str, schema: dict) -> dict:
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "format": schema,
+        "think": False,
+        "options": {"temperature": 0},
+    }
     request = Request(
         host.rstrip("/") + "/api/generate",
-        data=json.dumps({"model": model, "prompt": prompt, "stream": False, "format": "json", "options": {"temperature": 0}}).encode(),
+        data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json"},
     )
     with urlopen(request, timeout=180) as response:
@@ -48,13 +103,14 @@ def main() -> None:
     args = arguments()
     fixtures = read_jsonl(args.fixtures)
     sources = json.loads(args.evidence.read_text()) if args.kind == "evidence" else {}
+    schema = STRUCTURED_SCHEMA if args.kind == "structured" else EVIDENCE_SCHEMA
     output = []
     for fixture in fixtures:
         prompt = build_explainer_prompt(fixture["record"]) if args.kind == "structured" else evidence_prompt(fixture, sources)
         if args.dry_run:
             print(json.dumps({"id": fixture["id"], "prompt": prompt}, sort_keys=True))
             continue
-        output.append({"id": fixture["id"], "response": ask(args.host, args.model, prompt)})
+        output.append({"id": fixture["id"], "response": ask(args.host, args.model, prompt, schema)})
     if args.dry_run:
         return
     args.output.parent.mkdir(parents=True, exist_ok=True)

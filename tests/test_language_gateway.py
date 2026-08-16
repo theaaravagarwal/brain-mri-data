@@ -24,6 +24,16 @@ class LanguageGatewayTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "forbidden"):
             build_explainer_prompt(unsafe)
 
+    def test_prompt_requires_all_available_evidence_fields(self) -> None:
+        prompt = build_explainer_prompt(record())
+        self.assertIn('"segmentation.whole_lesion_dice"', prompt)
+        self.assertIn('"provenance.source_id"', prompt)
+        self.assertIn("exact scalar value", prompt)
+
+        abstention_prompt = build_explainer_prompt(record(status="abstain"))
+        self.assertNotIn('"segmentation.whole_lesion_dice"', abstention_prompt)
+        self.assertIn('"segmentation.status"', abstention_prompt)
+
     def test_explanation_rejects_clinical_claim(self) -> None:
         response = {
             "disclaimer": "Research output only; not a diagnosis or treatment recommendation.",
@@ -31,6 +41,15 @@ class LanguageGatewayTests(unittest.TestCase):
             "evidence": [{"field": "segmentation.status", "value": "complete"}],
         }
         with self.assertRaisesRegex(ValueError, "prohibited"):
+            validate_explanation(response, record())
+
+    def test_explanation_rejects_mismatched_evidence_value(self) -> None:
+        response = {
+            "disclaimer": "Research output only; not a diagnosis or treatment recommendation.",
+            "summary": "Segmentation completed.", "limitations": "Research only.", "abstained": False,
+            "evidence": [{"field": "segmentation.status", "value": "abstain"}],
+        }
+        with self.assertRaisesRegex(ValueError, "does not match"):
             validate_explanation(response, record())
 
     def test_benchmarks_score_faithful_responses(self) -> None:

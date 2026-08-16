@@ -85,15 +85,30 @@ def validate_explanation(response: dict[str, Any], envelope: dict[str, Any]) -> 
     for item in response["evidence"]:
         if set(item) != {"field", "value"} or item["field"] not in allowed:
             raise ValueError("Explanation cites an unsupported field")
+        value: Any = envelope
+        for component in item["field"].split("."):
+            if not isinstance(value, dict) or component not in value:
+                raise ValueError("Explanation cites a field absent from the result")
+            value = value[component]
+        if item["value"] != value:
+            raise ValueError("Explanation evidence value does not match the result")
     return response
 
 
 def build_explainer_prompt(envelope: dict[str, Any]) -> str:
     safe = validate_result_envelope(envelope)
+    evidence_fields = ["input_qc.status", "segmentation.status"]
+    if safe["segmentation"]["status"] == "complete":
+        evidence_fields.append("segmentation.whole_lesion_dice")
+    evidence_fields.append("provenance.source_id")
     return (
         "Return JSON only with disclaimer, summary, evidence, limitations, and abstained. "
         "Use only the supplied fields. Never diagnose, recommend treatment, infer an unseen fact, "
-        "or request an image. Exact disclaimer: Research output only; not a diagnosis or treatment recommendation.\n"
+        "or request an image. Evidence must contain exactly one {field, value} object for every "
+        "required evidence field; value must be the exact scalar value at that dotted path. "
+        f"Required evidence fields: {json.dumps(evidence_fields)}. "
+        "Set abstained to true exactly when segmentation.status is abstain. "
+        "Exact disclaimer: Research output only; not a diagnosis or treatment recommendation.\n"
         + json.dumps(safe, sort_keys=True)
     )
 
