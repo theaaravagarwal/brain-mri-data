@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Repair Ollama GPU discovery on the project's AMD ROCm WSL2 worker.
+# Configure Ollama to use the project's AMD ROCm WSL2 worker safely.
 set -euo pipefail
 
 if [[ ! -e /dev/dxg ]]; then
@@ -38,47 +38,70 @@ if [[ "$gpu_ready" != true ]]; then
   exit 1
 fi
 
-echo "This updates only Ollama's systemd drop-in and saves a timestamped backup."
-sudo -v
-
-dropin_dir=/etc/systemd/system/ollama.service.d
-dropin_path="$dropin_dir/wsl-gpu.conf"
-backup_path="$dropin_path.bak.$(date +%Y%m%d%H%M%S)"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+unit_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+unit_path="$unit_dir/ollama.service"
+backup_path="$unit_path.bak.$(date +%Y%m%d%H%M%S)"
+log_dir="$repo_root/runs/logs"
+log_path="$log_dir/ollama-amd.log"
 tmp_path=$(mktemp)
 trap 'rm -f "$tmp_path"' EXIT
 
-cat >"$tmp_path" <<'EOF'
+mkdir -p "$unit_dir" "$log_dir"
+touch "$log_path"
+previous_log_lines=$(wc -l <"$log_path")
+
+cat >"$tmp_path" <<EOF
+[Unit]
+Description=Ollama AMD ROCm worker for brain-mri-data
+After=network-online.target
+Wants=network-online.target
+
 [Service]
-# WSL2 GPU passthrough is provided by AMD's WSL ROCm runtime. Do not preload a
-# versioned libhsa path or set HSA_ENABLE_DXG_DETECTION: the latter makes this
-# ROCm 7.2 WSL runtime load an incompatible librocdxg ABI and crash.
-Environment="OLLAMA_LLM_LIBRARY=rocm_v7_2"
-Environment="OLLAMA_KEEP_ALIVE=5m"
-Environment="OLLAMA_CONTEXT_LENGTH=8192"
-Environment="OLLAMA_FLASH_ATTENTION=1"
-Environment="OLLAMA_KV_CACHE_TYPE=q8_0"
+Type=simple
+WorkingDirectory=$repo_root
+# Ollama's bundled native-Linux HSA runtime does not enumerate WSL /dev/dxg.
+# Preload the generic symlink to the installed WSL runtime that already passes
+# the project's PyTorch compute check. Keep DXG detection overrides unset.
+ExecStart=/usr/bin/env -u HSA_ENABLE_DXG_DETECTION LD_PRELOAD=/opt/rocm/lib/libhsa-runtime64.so.1 LD_LIBRARY_PATH=/opt/rocm/lib:/opt/rocm/lib64:/usr/local/lib/ollama/rocm_v7_2 OLLAMA_LLM_LIBRARY=rocm_v7_2 OLLAMA_HOST=127.0.0.1:11434 OLLAMA_KEEP_ALIVE=5m OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 OLLAMA_NUM_PARALLEL=1 OLLAMA_MAX_LOADED_MODELS=1 /usr/local/bin/ollama serve
+Restart=on-failure
+RestartSec=3
+StandardOutput=append:$log_path
+StandardError=append:$log_path
+
+[Install]
+WantedBy=default.target
 EOF
 
-sudo install -d -m 0755 "$dropin_dir"
-if sudo test -f "$dropin_path"; then
-  sudo cp -a "$dropin_path" "$backup_path"
-  echo "Saved previous drop-in: $backup_path"
+if [[ -f "$unit_path" ]]; then
+  cp -a "$unit_path" "$backup_path"
+  echo "Saved previous user unit: $backup_path"
 fi
-sudo install -m 0644 "$tmp_path" "$dropin_path"
-sudo systemctl daemon-reload
-sudo systemctl restart ollama
+install -m 0644 "$tmp_path" "$unit_path"
+systemctl --user daemon-reload
+systemctl --user enable ollama.service
+systemctl --user restart ollama.service
 
-echo "Waiting for Ollama to restart..."
+if ! loginctl enable-linger "$(id -un)"; then
+  echo "Warning: could not enable user lingering; Ollama may stop after logout." >&2
+fi
+
+echo "Waiting for Ollama to enumerate the GPU..."
 for _ in {1..15}; do
-  if ollama --version >/dev/null 2>&1; then
+  if curl -fsS http://127.0.0.1:11434/api/version >/dev/null 2>&1; then
     break
   fi
   sleep 1
 done
 
-echo "Ollama server started. Run this short GPU check (it keeps the model warm for five minutes):"
-echo '  ollama run qwen3:14b "Reply with exactly: OK"'
+new_log="$(tail -n "+$((previous_log_lines + 1))" "$log_path")"
+if ! grep -Eq 'library=ROCm.*compute=gfx1100' <<<"$new_log"; then
+  systemctl --user stop ollama.service
+  echo "Ollama did not enumerate ROCm gfx1100; service stopped to prevent CPU fallback." >&2
+  echo "$new_log" >&2
+  exit 1
+fi
+
+echo "Ollama is running through ROCm gfx1100. Verify every loaded model with:"
 echo '  ollama ps'
-echo
-echo "Success requires the PROCESSOR column to include GPU. If it says CPU, stop the model"
-echo "with 'ollama stop qwen3:14b' and inspect: journalctl -u ollama -n 120 --no-pager"
+echo "The PROCESSOR column must include GPU. Stop any CPU-backed model immediately."

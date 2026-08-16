@@ -24,10 +24,12 @@ Then run in an elevated PowerShell terminal:
 
 ```powershell
 wsl --update
-wsl --shutdown
 ```
 
-Restart the Ubuntu distribution. Confirm WSL exposes the GPU interface:
+Reboot the complete Windows host so the configured startup task brings WSL,
+systemd, and Tailscale back together. Never issue `wsl --shutdown` through SSH;
+it can remove remote access without starting the distribution again. After the
+host returns, confirm WSL exposes the GPU interface:
 
 ```bash
 grep -i microsoft /proc/sys/kernel/osrelease
@@ -92,8 +94,9 @@ sudo apt install -y ./amdgpu-install_7.2.70200-1_all.deb
 sudo amdgpu-install -y --usecase=wsl,rocm --no-dkms
 ```
 
-Do not install DKMS or the native Linux graphics driver inside WSL. Close WSL
-from PowerShell with `wsl --shutdown`, reopen Ubuntu, then verify:
+Do not install DKMS or the native Linux graphics driver inside WSL. If the new
+runtime genuinely requires a restart, notify the owner and reboot the complete
+Windows host. Do not use remote `wsl --shutdown`. After the host returns, verify:
 
 ```bash
 rocminfo | grep -E 'Name:|Marketing Name:'
@@ -158,17 +161,17 @@ engine counters. Press `Ctrl-C` to stop monitoring; it does not stop training.
 ## Restarting WSL from Windows
 
 Never run `wsl --shutdown` through the AMD worker's SSH connection: it closes
-the connection that is executing the command. Run the Windows-side launcher
-instead. It shuts WSL down, waits four seconds, and starts the default
-distribution so systemd and Tailscale can recover:
+the connection that is executing the command and may leave the distribution
+stopped. If a restart is genuinely required, notify the owner and reboot the
+complete Windows host from Windows so the existing startup task restores WSL.
+From an authorized Windows PowerShell session, the full-host command is:
 
-```text
-Restart-BrainMRI-WSL.bat
+```powershell
+shutdown.exe /r /t 0
 ```
 
-The repository copies this pair to the Windows Documents folder when the AMD
-worker is configured. Run the `.bat` by double-clicking it or from a Windows
-PowerShell window; do not run it inside WSL.
+Do not invoke that command unless a restart is necessary and the owner has been
+notified. Normal Ollama repair below does not require a restart.
 
 ## Optional: Ollama research-language worker
 
@@ -176,12 +179,12 @@ Ollama is optional and is only for the constrained research-language benchmarks
 in this project. It never receives images, paths, patient identifiers, or the
 power to route a model, diagnose, or recommend treatment.
 
-The RX 7900 XTX is an officially supported Ollama ROCm target, but a WSL2
-systemd service must not preload a versioned HSA runtime left behind by a ROCm
-package update. Such a preload can make GPU discovery crash and silently fall
-back to CPU. The helper below replaces only the Ollama drop-in, saves a
-timestamped backup, restarts the service, and prints the GPU-only acceptance
-check:
+The RX 7900 XTX is an officially supported Ollama ROCm target. On this WSL2
+host, Ollama's bundled native-Linux HSA runtime enumerates only CPU even though
+PyTorch sees `gfx1100`. The helper installs a user-scoped service that preloads
+the generic symlink to the installed WSL HSA runtime, keeps
+`HSA_ENABLE_DXG_DETECTION` unset, enables user lingering, and fails closed if
+the new service log does not report `library=ROCm` and `compute=gfx1100`:
 
 ```bash
 ./scripts/repair_amd_ollama_wsl.sh
@@ -189,12 +192,13 @@ ollama run qwen3:14b "Reply with exactly: OK"
 ollama ps
 ```
 
-`ollama ps` must say `GPU` in the `PROCESSOR` column. If it says `CPU`, stop
-the model immediately (`ollama stop qwen3:14b`) rather than consuming the
-thermally constrained CPU, then capture the service log:
+`ollama ps` must say `100% GPU` in the `PROCESSOR` column. If it says `CPU`,
+stop the model immediately (`ollama stop qwen3:14b`) rather than consuming the
+thermally constrained CPU, then capture the user-service log:
 
 ```bash
-journalctl -u ollama -n 120 --no-pager
+systemctl --user status ollama.service
+tail -n 120 runs/logs/ollama-amd.log
 ```
 
 The helper intentionally uses an 8k context and five-minute keep-alive for the
