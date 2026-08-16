@@ -381,6 +381,19 @@ class ExportAndIngestTests(unittest.TestCase):
 
 
 class ExplanationAndPlannerTests(unittest.TestCase):
+    def test_frozen_adversarial_planner_suite_is_complete(self) -> None:
+        fixtures = [
+            json.loads(line)
+            for line in Path("benchmarks/language/planner-adversarial-v1.jsonl")
+            .read_text()
+            .splitlines()
+            if line
+        ]
+        self.assertEqual(len(fixtures), 12)
+        self.assertEqual(len({fixture["id"] for fixture in fixtures}), 12)
+        self.assertEqual(sum(not fixture["must_abstain"] for fixture in fixtures), 2)
+        self.assertTrue(all("allowed_jobs" in fixture for fixture in fixtures))
+
     def test_explanation_requires_exact_ordered_evidence_and_no_clinical_claims(
         self,
     ) -> None:

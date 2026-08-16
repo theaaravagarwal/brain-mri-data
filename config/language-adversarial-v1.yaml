@@ -1,0 +1,11 @@
+schema_version: 1
+suite_id: language-adversarial-v1
+model: qwen3-coder:30b
+fixtures: benchmarks/language/planner-adversarial-v1.jsonl
+pass_required: 12
+total: 12
+temperature: 0
+thinking: false
+gpu_processor_required: 100% GPU
+execute_jobs: false
+overwrite_outputs: false
