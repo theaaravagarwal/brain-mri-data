@@ -1,0 +1,88 @@
+{
+  "automatic_promotion": false,
+  "baseline": {
+    "best_epoch": 10,
+    "foreground_probability": 0.0,
+    "mean_derived_box_iou": 0.4871560606372776,
+    "mean_hd95_mm": 31.429316007173977,
+    "overall_mean_dice": 0.8172982944892003,
+    "run": "runs/glioma-pilot-full-v3-batch4--cuda--brats--20260812--e10",
+    "seed": 20260812,
+    "smallest_quartile_mean_dice": 0.6802833527326584
+  },
+  "candidates": [
+    {
+      "best_epoch": 6,
+      "delta_vs_uniform": {
+        "mean_derived_box_iou": 0.06128689707564744,
+        "mean_hd95_mm": -7.821524051519539,
+        "overall_mean_dice": -0.0038452978317554676,
+        "smallest_quartile_mean_dice": 0.11140092089772224
+      },
+      "foreground_probability": 0.25,
+      "mean_derived_box_iou": 0.5484429577129251,
+      "mean_hd95_mm": 23.607791955654438,
+      "overall_mean_dice": 0.8134529966574449,
+      "passes_screen_gate": true,
+      "run": "runs/glioma-pilot-v4-fg25--cuda--brats--20260812--e10",
+      "screen_gate": {
+        "overall_dice_declines_by_no_more_than_0.005": true,
+        "smallest_quartile_improves_by_at_least_0.02": true
+      },
+      "seed": 20260812,
+      "smallest_quartile_mean_dice": 0.7916842736303806
+    },
+    {
+      "best_epoch": 10,
+      "delta_vs_uniform": {
+        "mean_derived_box_iou": -0.18345889346633515,
+        "mean_hd95_mm": 18.187433193280146,
+        "overall_mean_dice": 0.017520667497928244,
+        "smallest_quartile_mean_dice": 0.05326319485902786
+      },
+      "foreground_probability": 0.5,
+      "mean_derived_box_iou": 0.3036971671709425,
+      "mean_hd95_mm": 49.61674920045412,
+      "overall_mean_dice": 0.8348189619871286,
+      "passes_screen_gate": true,
+      "run": "runs/glioma-pilot-v4-fg50--cuda--brats--20260812--e10",
+      "screen_gate": {
+        "overall_dice_declines_by_no_more_than_0.005": true,
+        "smallest_quartile_improves_by_at_least_0.02": true
+      },
+      "seed": 20260812,
+      "smallest_quartile_mean_dice": 0.7335465475916862
+    },
+    {
+      "best_epoch": 9,
+      "delta_vs_uniform": {
+        "mean_derived_box_iou": -0.13304945109786953,
+        "mean_hd95_mm": 6.757588331515972,
+        "overall_mean_dice": 0.0254026220395015,
+        "smallest_quartile_mean_dice": 0.05042254365980625
+      },
+      "foreground_probability": 0.75,
+      "mean_derived_box_iou": 0.3541066095394081,
+      "mean_hd95_mm": 38.18690433868995,
+      "overall_mean_dice": 0.8427009165287018,
+      "passes_screen_gate": true,
+      "run": "runs/glioma-pilot-v4-fg75--cuda--brats--20260812--e10",
+      "screen_gate": {
+        "overall_dice_declines_by_no_more_than_0.005": true,
+        "smallest_quartile_improves_by_at_least_0.02": true
+      },
+      "seed": 20260812,
+      "smallest_quartile_mean_dice": 0.7307058963924646
+    }
+  ],
+  "eligible_for_human_review": [
+    0.25,
+    0.5,
+    0.75
+  ],
+  "evaluation_scope": "single-seed internal-validation screen; not external evidence",
+  "next_step": "Human review must decide whether one setting receives the remaining two fixed seeds.",
+  "review_status": "human_review_required",
+  "schema_version": 1,
+  "smallest_quartile_case_count": 16
+}
