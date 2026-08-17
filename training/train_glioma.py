@@ -409,6 +409,8 @@ def main(*, exploratory_rocm: bool = False) -> None:
     expected_gpu = str(profile.get("expected_gpu_name_contains", ""))
     if expected_gpu and expected_gpu.lower() not in device_name.lower():
         raise SystemExit(f"Runtime GPU {device_name!r} does not match profile expectation {expected_gpu!r}")
+    torch.cuda.reset_peak_memory_stats(device)
+    training_started = time.monotonic()
     model = PamcSegResNet(args.init_filters, source_count).to(device)
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -503,6 +505,8 @@ def main(*, exploratory_rocm: bool = False) -> None:
         if len(losses) % accumulation:
             scaler.step(optimizer); scaler.update(); optimizer.zero_grad(set_to_none=True)
         report: dict[str, Any] = {"epoch": epoch, "train_loss": float(np.mean(losses))}
+        report["train_batches"] = len(losses)
+        report["epoch_seconds"] = round(time.monotonic() - epoch_started, 3)
         if epoch % args.validation_interval == 0:
             report["validation"] = evaluate(
                 model, val_loader, device, patch_size,
@@ -529,12 +533,19 @@ def main(*, exploratory_rocm: bool = False) -> None:
 
     checkpoint = torch.load(args.output / "best.pt", map_location=device, weights_only=True)
     model.load_state_dict(checkpoint["model"])
+    torch.cuda.synchronize(device)
     final: dict[str, Any] = {
         "schema_version": 1,
         "run": run,
         "checkpoint_epoch": checkpoint["epoch"],
         "checkpoint_sha256": file_sha256(args.output / "best.pt"),
         "last_checkpoint_sha256": file_sha256(args.output / "last.pt"),
+        "runtime": {
+            "elapsed_seconds": round(time.monotonic() - training_started, 3),
+            "peak_memory_allocated_bytes": torch.cuda.max_memory_allocated(device),
+            "peak_memory_reserved_bytes": torch.cuda.max_memory_reserved(device),
+            "total_memory_bytes": torch.cuda.get_device_properties(device).total_memory,
+        },
     }
     if external_loader is None:
         final["external_evaluation"] = "not_run: pilot_internal_only"
