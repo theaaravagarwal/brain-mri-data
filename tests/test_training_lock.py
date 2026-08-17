@@ -8,7 +8,9 @@ from pathlib import Path
 from training.train_glioma import (
     training_patch_sampling,
     validate_cnn_accelerator,
+    validate_exploratory_rocm,
     validate_profile_against_study,
+    validate_run_limits,
     write_progress,
 )
 
@@ -54,6 +56,31 @@ class TrainingLockTests(unittest.TestCase):
             validate_cnn_accelerator({"accelerator": "amd"}, "7.2")
         with self.assertRaisesRegex(ValueError, "CUDA PyTorch"):
             validate_cnn_accelerator({"accelerator": "cuda"}, "7.2")
+
+    def test_exploratory_rocm_is_bratsonly_and_nonexternal(self) -> None:
+        study = {
+            "evaluation_status": "pilot_internal_only",
+            "external_test": [],
+            "study": {
+                "mode": "pilot_internal_only",
+                "train_sources": ["brats2020_kaggle"],
+            },
+        }
+        validate_exploratory_rocm({"accelerator": "amd"}, "7.2", study, "brats")
+        with self.assertRaisesRegex(ValueError, "BraTS-only"):
+            validate_exploratory_rocm({"accelerator": "amd"}, "7.2", study, "pamc")
+        with self.assertRaisesRegex(ValueError, "external"):
+            validate_exploratory_rocm(
+                {"accelerator": "amd"}, "7.2", {**study, "external_test": [{"case_id": "heldout"}]}, "brats",
+            )
+        with self.assertRaisesRegex(ValueError, "AMD profile"):
+            validate_exploratory_rocm({"accelerator": "cuda"}, None, study, "brats")
+
+    def test_run_limits_reject_negative_or_zero_epoch_values(self) -> None:
+        validate_run_limits(1, 0, 0)
+        for values in ((0, 0, 0), (1, -1, 0), (1, 0, -1)):
+            with self.assertRaisesRegex(ValueError, "non-negative"):
+                validate_run_limits(*values)
 
     def test_live_progress_is_valid_json(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

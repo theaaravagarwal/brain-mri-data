@@ -70,6 +70,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--init-filters", type=int, default=32)
     parser.add_argument("--validation-interval", type=int, default=1)
     parser.add_argument("--training-cache", type=Path, help="completed chunk-major cache manifest for the locked train split")
+    parser.add_argument("--limit-train-batches", type=int, default=0, help="exploratory ROCm smoke only; zero means all")
+    parser.add_argument("--limit-val-batches", type=int, default=0, help="exploratory ROCm smoke only; zero means all")
     return parser.parse_args()
 
 
@@ -106,6 +108,29 @@ def validate_cnn_accelerator(profile: dict[str, Any], hip_version: str | None) -
         raise ValueError("The frozen ISEF CNN study is restricted to the CUDA runtime profile")
     if hip_version is not None:
         raise ValueError("The cuda profile requires a CUDA PyTorch build")
+
+
+def validate_exploratory_rocm(
+    profile: dict[str, Any],
+    hip_version: str | None,
+    study: dict[str, Any],
+    arm: str,
+) -> None:
+    """Allow only a non-promotable, BraTS-only internal ROCm replication."""
+    if profile.get("accelerator") != "amd" or hip_version is None:
+        raise ValueError("The exploratory ROCm trainer requires the AMD profile and a ROCm PyTorch build")
+    locked = study.get("study", {})
+    if study.get("evaluation_status") != "pilot_internal_only" or locked.get("mode") != "pilot_internal_only":
+        raise ValueError("The exploratory ROCm trainer accepts only pilot_internal_only studies")
+    if study.get("external_test"):
+        raise ValueError("The exploratory ROCm trainer cannot consume an external test cohort")
+    if arm != "brats" or locked.get("train_sources") != ["brats2020_kaggle"]:
+        raise ValueError("The exploratory ROCm trainer is restricted to the BraTS-only arm")
+
+
+def validate_run_limits(epochs: int, train_batches: int, val_batches: int) -> None:
+    if epochs < 1 or train_batches < 0 or val_batches < 0:
+        raise ValueError("Epoch and batch-limit values must be non-negative, with at least one epoch")
 
 
 def training_patch_sampling(study: dict[str, Any]) -> dict[str, Any]:
@@ -248,6 +273,7 @@ def evaluate(
     corruption_seed: int | None = None,
     progress_path: Path | None = None,
     progress_fields: dict[str, Any] | None = None,
+    max_batches: int = 0,
 ) -> dict[str, Any]:
     per_case: list[dict[str, Any]] = []
     model.eval()
@@ -256,9 +282,13 @@ def evaluate(
             data, total=len(data), desc=(progress_fields or {}).get("phase", "evaluate"),
             unit="case", dynamic_ncols=True, disable=not sys.stderr.isatty(), leave=False,
         )
-        for case_number, batch in enumerate(iterator, start=1):
+        processed_cases = 0
+        for batch_number, batch in enumerate(iterator, start=1):
+            if max_batches and batch_number > max_batches:
+                break
             image = batch["image"].to(device, non_blocking=True)
             case_ids = [str(case_id) for case_id in batch["case_id"]]
+            processed_cases += len(case_ids)
             masked_modalities: list[str | None] = [None] * len(case_ids)
             if corruption_seed is not None:
                 image, masked_modalities = deterministic_mask_one_modality(image, case_ids, corruption_seed)
@@ -279,7 +309,7 @@ def evaluate(
                 write_progress(
                     progress_path,
                     **(progress_fields or {}),
-                    cases_complete=case_number,
+                    cases_complete=processed_cases,
                     cases_total=len(data),
                 )
     if not per_case:
@@ -293,13 +323,21 @@ def evaluate(
     }
 
 
-def main() -> None:
+def main(*, exploratory_rocm: bool = False) -> None:
     args = parse_args()
+    validate_run_limits(args.epochs, args.limit_train_batches, args.limit_val_batches)
+    if exploratory_rocm and args.output.exists():
+        raise FileExistsError(f"Refusing to overwrite exploratory ROCm output: {args.output}")
     profile = load_profile(args.profile)
     if not torch.cuda.is_available():
         raise SystemExit("Selected training environment cannot access a GPU")
-    validate_cnn_accelerator(profile, torch.version.hip)
     study = json.loads(args.study.read_text())
+    if exploratory_rocm:
+        validate_exploratory_rocm(profile, torch.version.hip, study, args.arm)
+    else:
+        validate_cnn_accelerator(profile, torch.version.hip)
+        if args.limit_train_batches or args.limit_val_batches:
+            raise ValueError("Batch limits are restricted to the exploratory ROCm trainer")
     if study.get("study", {}).get("study_id") != "glioma":
         raise ValueError("This trainer only accepts the locked glioma study")
     if args.arm not in study["study"]["arms"]:
@@ -411,6 +449,12 @@ def main() -> None:
             "device_count": torch.cuda.device_count(),
             "total_memory_bytes": torch.cuda.get_device_properties(device).total_memory,
         },
+        "runtime_scope": "exploratory_rocm_internal_only" if exploratory_rocm else "cuda_study",
+        "promotion_eligible": not exploratory_rocm and study["evaluation_status"] == "external_test_locked",
+        "batch_limits": {
+            "train": args.limit_train_batches,
+            "validation": args.limit_val_batches,
+        },
     }
     (args.output / "run.json").write_text(json.dumps(run, indent=2, sort_keys=True) + "\n")
     progress_path = args.output / "progress.json"
@@ -426,6 +470,8 @@ def main() -> None:
             unit="batch", dynamic_ncols=True, disable=not sys.stderr.isatty(), leave=True,
         )
         for step, batch in enumerate(train_iterator, start=1):
+            if args.limit_train_batches and step > args.limit_train_batches:
+                break
             image = batch["image"].to(device, non_blocking=True)
             label = batch["label"].to(device, non_blocking=True)
             with torch.amp.autocast("cuda", dtype=torch.float16):
@@ -462,6 +508,7 @@ def main() -> None:
                 model, val_loader, device, patch_size,
                 progress_path=progress_path,
                 progress_fields={"phase": "validation", "epoch": epoch, "epochs": args.epochs},
+                max_batches=args.limit_val_batches,
             )
             if report["validation"]["mean_dice"] > best_dice:
                 best_dice = report["validation"]["mean_dice"]
@@ -478,9 +525,17 @@ def main() -> None:
             elapsed_seconds=round(time.monotonic() - epoch_started, 1),
         )
 
+    torch.save({"epoch": args.epochs, "model": model.state_dict(), "report": report}, args.output / "last.pt")
+
     checkpoint = torch.load(args.output / "best.pt", map_location=device, weights_only=True)
     model.load_state_dict(checkpoint["model"])
-    final: dict[str, Any] = {"schema_version": 1, "run": run, "checkpoint_epoch": checkpoint["epoch"], "checkpoint_sha256": file_sha256(args.output / "best.pt")}
+    final: dict[str, Any] = {
+        "schema_version": 1,
+        "run": run,
+        "checkpoint_epoch": checkpoint["epoch"],
+        "checkpoint_sha256": file_sha256(args.output / "best.pt"),
+        "last_checkpoint_sha256": file_sha256(args.output / "last.pt"),
+    }
     if external_loader is None:
         final["external_evaluation"] = "not_run: pilot_internal_only"
     else:
