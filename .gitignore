@@ -16,7 +16,7 @@ dist/
 
 # Local agent handoff and session state
 .agentstate-relay/
-handoff.md
+[Hh][Aa][Nn][Dd][Oo][Ff][Ff].md
 
 # Dataset material and generated manifests: never commit medical images
 data/**
@@ -47,8 +47,8 @@ wandb/
 *.log
 
 # Local agent/runtime state
-.agentstate-relay/
 .runtime/
+*.tsbuildinfo
 
 # Credentials and local configuration
 .env

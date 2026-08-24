@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.runtime/
+.playwright-cli/
+output/
+tsconfig.tsbuildinfo
+*.log
+
+# Local design-tool state
+.impeccable/
+
+# Host-specific scratch trees and deployment patches. These may contain copied
+# repositories, generated manifests, or machine-local operational scripts.
+.nvidia-dev/
+.remote-patches/
