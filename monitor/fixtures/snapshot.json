@@ -1,0 +1,77 @@
+{
+  "updatedAt": "2026-08-17T10:00:00.000Z",
+  "hosts": {
+    "nvidia": {
+      "reachable": true,
+      "data": {
+        "id": "nvidia",
+        "label": "NVIDIA worker",
+        "role": "CNN training",
+        "hostname": "brain-mri-cuda",
+        "gpu": { "name": "NVIDIA GeForce RTX 3060", "utilizationPercent": 99, "memoryUsedMib": 7528, "memoryTotalMib": 12288, "temperatureC": 61, "powerW": 128, "active": true },
+        "memory": { "usedGib": 20.4, "totalGib": 31.3 },
+        "disk": { "usedGib": 606, "totalGib": 1007, "freeGib": 401 },
+        "activeRun": {
+          "name": "glioma-pilot-v4-uniform-control-retry1--cuda--brats--20260814--e10",
+          "status": "running",
+          "arm": "brats",
+          "seed": 20260814,
+          "profile": "cuda-batch4",
+          "epoch": 9,
+          "epochs": 10,
+          "phase": "validation",
+          "completed": 39,
+          "total": 65,
+          "unit": "case",
+          "liveLoss": null,
+          "updatedAt": "2026-08-17T10:00:00.000Z",
+          "metrics": [
+            { "epoch": 1, "trainLoss": 1.114, "meanDice": 0.642, "meanBoxIou": 0.302, "meanHd95Mm": 61.2 },
+            { "epoch": 2, "trainLoss": 0.932, "meanDice": 0.701, "meanBoxIou": 0.361, "meanHd95Mm": 52.1 },
+            { "epoch": 3, "trainLoss": 0.821, "meanDice": 0.749, "meanBoxIou": 0.409, "meanHd95Mm": 43.8 },
+            { "epoch": 4, "trainLoss": 0.754, "meanDice": 0.781, "meanBoxIou": 0.451, "meanHd95Mm": 36.4 },
+            { "epoch": 5, "trainLoss": 0.702, "meanDice": 0.803, "meanBoxIou": 0.487, "meanHd95Mm": 30.6 },
+            { "epoch": 6, "trainLoss": 0.674, "meanDice": 0.7948, "meanBoxIou": 0.469, "meanHd95Mm": 34.0 },
+            { "epoch": 7, "trainLoss": 0.668, "meanDice": 0.7475, "meanBoxIou": 0.275, "meanHd95Mm": 54.4 },
+            { "epoch": 8, "trainLoss": 0.6124, "meanDice": 0.8219, "meanBoxIou": 0.5203, "meanHd95Mm": 25.7 }
+          ]
+        },
+        "latestRun": null,
+        "recentRuns": [
+          { "name": "glioma-pilot-v4-uniform-control-retry1--cuda--brats--20260813--e10", "seed": 20260813, "status": "complete", "bestEpoch": 9, "bestDice": 0.8372, "bestBoxIou": 0.5752, "bestHd95Mm": 19.8, "modifiedAt": "2026-08-17T08:40:00.000Z" }
+        ],
+        "sessions": ["uniform-controls-retry1", "uniform-controls-retry1-analysis", "nvidia-post-controls-cleanup"],
+        "queue": { "state": "running", "detail": "uniform-controls-retry1" }
+      },
+      "lastSuccessAt": "2026-08-17T10:00:00.000Z",
+      "staleSince": null,
+      "latencyMs": 142,
+      "error": null,
+      "failures": 0,
+      "nextAttemptAt": "2026-08-17T10:00:10.000Z"
+    },
+    "amd": {
+      "reachable": true,
+      "data": {
+        "id": "amd",
+        "label": "AMD worker",
+        "role": "Language and exploratory ROCm",
+        "hostname": "saucybooka",
+        "gpu": { "name": "AMD Radeon RX 7900 XTX", "utilizationPercent": null, "memoryUsedMib": null, "memoryTotalMib": 24576, "temperatureC": null, "powerW": null, "active": false },
+        "memory": { "usedGib": 1.0, "totalGib": 31.1 },
+        "disk": { "usedGib": 1585, "totalGib": 1862, "freeGib": 277 },
+        "activeRun": null,
+        "latestRun": null,
+        "recentRuns": [],
+        "sessions": [],
+        "queue": { "state": "attention", "detail": "benchmark-r4-b4.failed" }
+      },
+      "lastSuccessAt": "2026-08-17T10:00:00.000Z",
+      "staleSince": null,
+      "latencyMs": 151,
+      "error": null,
+      "failures": 0,
+      "nextAttemptAt": "2026-08-17T10:00:10.000Z"
+    }
+  }
+}
