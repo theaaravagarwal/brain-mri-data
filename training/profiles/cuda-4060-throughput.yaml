@@ -1,0 +1,13 @@
+schema_version: 1
+profile_id: cuda-4060-throughput
+accelerator: cuda
+expected_gpu_name_contains: RTX 4060
+mixed_precision: fp16
+batch_size: 2
+effective_batch_size: 4
+num_workers: 8
+prefetch_factor: 2
+persistent_workers: true
+pin_memory: false
+patch_size: [80, 80, 80]
+notes: RTX 4060 throughput profile retaining unpinned transfers after the prior pinned-memory validation failure

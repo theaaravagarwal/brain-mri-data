@@ -7,7 +7,7 @@ Wants=brain-mri-cnn-4090-bootstrap.service
 Type=simple
 WorkingDirectory=%h/Documents/.aa/brain
 Environment=QUEUE_WAIT_FOR_UNIT=brain-mri-cnn-4090-bootstrap.service
-ExecStart=%h/Documents/.aa/brain/scripts/run_durable_cuda_queue.sh prototype-cnn-rtx4090-staging data/manifests/glioma.pilot.4090-bootstrap.json training/profiles/cuda-4090-safe.yaml 100 brats:20260902 brats:20260903 brats:20260904
+ExecStart=%h/Documents/.aa/brain/scripts/run_durable_cuda_queue.sh prototype-cnn-rtx4090-staging data/manifests/glioma.pilot.4090-bootstrap.json training/profiles/cuda-4090-throughput.yaml 100 brats:20260902 brats:20260903 brats:20260904
 Restart=on-failure
 RestartSec=30
 Nice=10
