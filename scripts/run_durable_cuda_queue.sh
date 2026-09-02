@@ -47,10 +47,11 @@ status_path="runs/queue-logs/${queue_id}.status.json"
 write_status() {
   local state="$1" current="${2:-}" last_error="${3:-}" completed=0 failed=0 separator=""
   local temporary="${status_path}.tmp"
-  for run in "${runs[@]}"; do
-    if [[ -f "$run/external.json" ]]; then
+  local candidate
+  for candidate in "${runs[@]}"; do
+    if [[ -f "$candidate/external.json" ]]; then
       completed=$((completed + 1))
-    elif [[ -e "$run" && "$run" != "$current" ]]; then
+    elif [[ -e "$candidate" && "$candidate" != "$current" ]]; then
       failed=$((failed + 1))
     fi
   done
@@ -58,9 +59,9 @@ write_status() {
     printf '{"schemaVersion":"research-training-queue/v1","queueId":"%s","state":"%s","currentRun":' "$queue_id" "$state"
     [[ -n "$current" ]] && printf '"%s"' "${current#runs/}" || printf 'null'
     printf ',"queuedRuns":['
-    for run in "${runs[@]}"; do
-      if [[ ! -e "$run" ]]; then
-        printf '%s"%s"' "$separator" "${run#runs/}"
+    for candidate in "${runs[@]}"; do
+      if [[ ! -e "$candidate" && "$candidate" != "$current" ]]; then
+        printf '%s"%s"' "$separator" "${candidate#runs/}"
         separator=','
       fi
     done
