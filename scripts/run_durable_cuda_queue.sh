@@ -84,6 +84,16 @@ if [[ -n "${QUEUE_WAIT_FOR_UNIT:-}" ]]; then
     sleep 30
   done
 fi
+if [[ -n "${QUEUE_WAIT_FOR_FILE:-}" ]]; then
+  if [[ "$QUEUE_WAIT_FOR_FILE" = /* || "$QUEUE_WAIT_FOR_FILE" == *".."* ]]; then
+    echo "QUEUE_WAIT_FOR_FILE must be a repository-relative path" >&2
+    exit 64
+  fi
+  while [[ ! -f "$QUEUE_WAIT_FOR_FILE" ]]; do
+    echo "$(date -Is) waiting for ${QUEUE_WAIT_FOR_FILE}"
+    sleep 30
+  done
+fi
 
 failures=0
 for index in "${!jobs[@]}"; do
