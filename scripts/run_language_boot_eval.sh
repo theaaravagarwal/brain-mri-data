@@ -3,6 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
+export PYTHONPATH="$repo_root/src${PYTHONPATH:+:$PYTHONPATH}"
 for _ in {1..60}; do
   if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; then
     for model in qwen3:0.6b qwen3:4b; do
