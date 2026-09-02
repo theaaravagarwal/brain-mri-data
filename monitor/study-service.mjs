@@ -142,6 +142,14 @@ async function runJsonProcess(command, args, { cwd, timeoutMs, spawnImpl = spawn
   });
 }
 
+async function commandSucceeds(command, args, spawnImpl = spawn) {
+  return await new Promise(resolvePromise => {
+    const child = spawnImpl(command, args, { stdio: "ignore" });
+    child.on("error", () => resolvePromise(false));
+    child.on("close", code => resolvePromise(code === 0));
+  });
+}
+
 export function createStudyService(options = {}) {
   const repoRoot = options.repoRoot || defaultRepoRoot;
   const runtimeRoot = options.runtimeRoot || join(here, ".runtime", "studies");
@@ -150,6 +158,7 @@ export function createStudyService(options = {}) {
   const checkpoint = options.checkpoint || join(repoRoot, "runs", "glioma-pilot--cuda-4060--brats--20260828--e100", "best.pt");
   const expectedCheckpointSha256 = options.expectedCheckpointSha256 || EXPECTED_CHECKPOINT_SHA256;
   const deviceProbe = options.deviceProbe || (async () => {
+    if (await commandSucceeds("pgrep", ["-f", "training/train_glioma.py"], options.spawnImpl)) return false;
     const result = await runJsonProcess(python, ["-c", "import json, torch; print(json.dumps({'cuda': torch.cuda.is_available()}))"], {
       cwd: repoRoot, timeoutMs: 15_000, spawnImpl: options.spawnImpl
     });
