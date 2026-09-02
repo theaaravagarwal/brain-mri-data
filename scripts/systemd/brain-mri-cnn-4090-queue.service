@@ -1,0 +1,16 @@
+[Unit]
+Description=Durable RTX 4090 Brain MRI CNN research queue
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documents/.aa/brain
+ExecStart=%h/Documents/.aa/brain/scripts/run_durable_cuda_queue.sh prototype-cnn-rtx4090-long data/manifests/glioma.pilot.4060.json training/profiles/cuda-4090-safe.yaml 100 brats:20260902 brats:20260903 brats:20260904 brats:20260905 brats:20260906 brats:20260907 brats:20260908 brats:20260909 brats:20260910 brats:20260911 brats:20260912 brats:20260913 brats:20260914 brats:20260915 brats:20260916
+Restart=on-failure
+RestartSec=30
+Nice=10
+UMask=0077
+
+[Install]
+WantedBy=default.target
