@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
-revision="$(git rev-parse --short=12 HEAD)"
+revision="${BRAIN_MRI_SOURCE_REVISION:-$(git rev-parse --short=12 HEAD)}"
 output_dir="runs/language/serving-metadata-v1--${revision}--$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p runs/language
 mkdir "$output_dir"
