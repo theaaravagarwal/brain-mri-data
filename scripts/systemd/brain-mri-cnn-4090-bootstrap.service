@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=%h/Documents/.aa/brain
-ExecStart=%h/Documents/.aa/brain/scripts/run_durable_cuda_queue.sh prototype-cnn-rtx4090-bootstrap data/manifests/glioma.pilot.4090-bootstrap.json training/profiles/cuda-4090-safe.yaml 100 brats:20260901
+ExecStart=%h/Documents/.aa/brain/scripts/run_durable_cuda_queue.sh prototype-cnn-rtx4090-bootstrap-v2 data/manifests/glioma.pilot.4090-bootstrap.json training/profiles/cuda-4090-safe.yaml 100 brats:20260901
 Restart=on-failure
 RestartSec=30
 Nice=10

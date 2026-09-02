@@ -18,6 +18,7 @@ if [[ ! "$queue_id" =~ ^[a-z0-9-]+$ || ! "$epochs" =~ ^[1-9][0-9]*$ ]]; then
   exit 64
 fi
 cd "$repo_root"
+export PYTHONPATH="$repo_root/src${PYTHONPATH:+:$PYTHONPATH}"
 if [[ ! -f "$study" || ! -f "$profile" || ! -x .venv/bin/python ]]; then
   echo "queue prerequisites are unavailable" >&2
   exit 66
