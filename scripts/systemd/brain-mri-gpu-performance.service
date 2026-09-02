@@ -1,0 +1,12 @@
+[Unit]
+Description=Brain MRI RTX 4090 performance power limit
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/nvidia-smi -pm 1
+ExecStart=/usr/bin/nvidia-smi -pl 150
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
