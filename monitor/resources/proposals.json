@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "research-proposals/v1",
+  "generatedAt": "2026-08-28T02:28:57.011766+00:00",
+  "source": {
+    "status": "fresh",
+    "staleSince": null,
+    "error": null
+  },
+  "artifactDigest": "b51e2d6ef2b8795d48bde77c1e02cfecf2846f660e615883808bda71ce5b8115",
+  "data": {
+    "jobs": [
+      { "runId": "baseline-confirmations", "profile": "internal-research-reference", "state": "complete", "proposalAllowed": false, "reasonCode": "already_complete" },
+      { "runId": "nesting-penalty-confirmations", "profile": "candidate-evaluation", "state": "rejected", "proposalAllowed": false, "reasonCode": "candidate_rejected" }
+    ],
+    "proposals": [
+      { "abstained": true, "runId": null, "profile": null, "reasonCode": "already_complete", "reason": "No more training is proposed. The baseline is retained and the nesting candidate is rejected; any future experiment requires a new preregistered hypothesis.", "executed": false }
+    ]
+  }
+}

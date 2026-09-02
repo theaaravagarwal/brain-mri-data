@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "research-explanation/v1",
+  "generatedAt": "2026-08-28T02:28:57.011766+00:00",
+  "source": {
+    "status": "fresh",
+    "staleSince": null,
+    "error": null
+  },
+  "artifactDigest": "b51e2d6ef2b8795d48bde77c1e02cfecf2846f660e615883808bda71ce5b8115",
+  "data": {
+    "deterministic": {
+      "disclaimer": "Research output only; not a diagnosis or treatment recommendation.",
+      "summary": "The three-seed nesting-penalty candidate was rejected. Its mean paired whole-tumor Dice effect was -0.00072 with a 95% case-cluster interval from -0.00196 to +0.00050; two of three seed effects were negative and the frozen guardrails failed. The verified baseline is retained for internal research use.",
+      "limitations": [
+        "Results use 53 repeated observations from one internal BraTS validation split.",
+        "The evidence does not establish performance on an independent cohort or clinical fitness.",
+        "Baseline seed 20260821 has documented checkpoint-recovery history.",
+        "Automatic promotion and autonomous job execution remain disabled."
+      ],
+      "evidence": [
+        { "field": "decision_state", "value": "candidate_rejected_baseline_retained" },
+        { "field": "retained_model_seed", "value": 20260821 },
+        { "field": "whole_tumor_dice_delta", "value": -0.0007230926838079322 },
+        { "field": "whole_tumor_dice_ci95_lower", "value": -0.001959608649099155 },
+        { "field": "whole_tumor_dice_ci95_upper", "value": 0.0005021327969130638 },
+        { "field": "tumor_core_dice_delta", "value": -0.013837675951128961 },
+        { "field": "whole_tumor_hd95_mm_delta", "value": 0.4727514172054329 },
+        { "field": "automatic_promotion", "value": "false" }
+      ]
+    },
+    "llm": {
+      "status": "unavailable",
+      "artifact": null,
+      "reason": "No LLM rendering is needed; deterministic evidence is complete and remains the source of truth."
+    }
+  }
+}

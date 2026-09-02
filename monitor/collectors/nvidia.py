@@ -9,8 +9,10 @@ from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPO = Path("/home/theaa/Documents/brain-mri-data")
+REPO = Path.home() / "Documents" / ".aarav" / "brain"
 RUNS = REPO / "runs"
+QUEUE_STATUS = RUNS / "queue-logs" / "prototype-cnn-rtx4060-long.status.json"
+QUEUE_UNIT = "brain-mri-cnn-4060-queue.service"
 
 
 def command(args, timeout=4):
@@ -71,7 +73,8 @@ def active_output(processes):
     for line in processes:
         try:
             parts = shlex.split(line)
-            return Path(parts[parts.index("--output") + 1])
+            path = Path(parts[parts.index("--output") + 1])
+            return path if path.is_absolute() else REPO / path
         except (ValueError, IndexError):
             pass
     return None
@@ -197,19 +200,23 @@ def latest_completed_run(active):
 def gpu():
     fields = ["name", "utilization.gpu", "memory.used", "memory.total", "temperature.gpu", "power.draw"]
     executable = shutil.which("nvidia-smi")
+    if executable is None and Path("/usr/bin/nvidia-smi").exists():
+        executable = "/usr/bin/nvidia-smi"
     if executable is None and Path("/usr/lib/wsl/lib/nvidia-smi").exists():
         executable = "/usr/lib/wsl/lib/nvidia-smi"
     result = command([executable or "nvidia-smi", f"--query-gpu={','.join(fields)}", "--format=csv,noheader,nounits"])
     try:
         values = [part.strip() for part in result.stdout.strip().split(",")]
+        number = lambda value: float(value) if value not in {"", "N/A", "[N/A]"} else None
+        utilization = number(values[1])
         return {
-            "name": values[0], "utilizationPercent": float(values[1]),
-            "memoryUsedMib": float(values[2]), "memoryTotalMib": float(values[3]),
-            "temperatureC": float(values[4]), "powerW": float(values[5]),
-            "active": float(values[1]) > 0,
+            "name": values[0], "utilizationPercent": utilization,
+            "memoryUsedMib": number(values[2]), "memoryTotalMib": number(values[3]),
+            "temperatureC": number(values[4]), "powerW": number(values[5]),
+            "active": utilization is not None and utilization > 0,
         }
     except (IndexError, ValueError):
-        return {"name": "NVIDIA RTX 3060", "utilizationPercent": None, "memoryUsedMib": None, "memoryTotalMib": 12288, "temperatureC": None, "powerW": None, "active": False}
+        return {"name": "NVIDIA GeForce RTX 4060", "utilizationPercent": None, "memoryUsedMib": None, "memoryTotalMib": 8188, "temperatureC": None, "powerW": None, "active": False}
 
 
 def memory():
@@ -235,20 +242,35 @@ def sessions():
     return [line for line in result.stdout.splitlines() if line][:12]
 
 
+def queue_snapshot():
+    value = read_json(QUEUE_STATUS)
+    service = command(["systemctl", "--user", "is-active", QUEUE_UNIT]).stdout.strip() or "unknown"
+    valid = (
+        value.get("schemaVersion") == "research-training-queue/v1"
+        and value.get("state") in {"waiting", "running", "complete", "attention"}
+        and isinstance(value.get("queuedRuns"), list)
+        and all(isinstance(run, str) for run in value["queuedRuns"])
+        and all(isinstance(value.get(key), int) for key in ("completedCount", "totalCount", "failedCount"))
+    )
+    if not valid:
+        return {
+            "state": "attention", "detail": "Queue status unavailable", "serviceState": service,
+            "currentRun": None, "queuedRuns": [], "completedCount": 0, "totalCount": 0,
+            "failedCount": 0, "updatedAt": None, "lastError": "status_unavailable",
+        }
+    current = value.get("currentRun")
+    queued = value["queuedRuns"]
+    return {
+        **value,
+        "serviceState": service,
+        "detail": current or f"{len(queued)} queued · {value['completedCount']}/{value['totalCount']} complete",
+    }
+
+
 processes = process_lines()
 active = active_output(processes)
 active_nnunet = nnunet_snapshot(processes)
 session_names = sessions()
-session_priority = (
-    "product-v2-preprocess",
-    "product-v2-training-queue",
-    "product-v2-screen-analysis",
-    "product-v2-confirmation-queue",
-    "product-v2-confirmation-analysis",
-    "product-v2-ensemble-queue",
-    "product-v2-ensemble-analysis",
-)
-queue_detail = next((name for name in session_priority if name in session_names), None)
 print(json.dumps({
     "id": "nvidia",
     "label": "NVIDIA worker",
@@ -261,8 +283,5 @@ print(json.dumps({
     "latestRun": latest_completed_run(active),
     "recentRuns": recent_runs(active),
     "sessions": session_names,
-    "queue": {
-        "state": "running" if active_nnunet or active else "waiting" if session_names else "idle",
-        "detail": queue_detail or (session_names[0] if session_names else None),
-    },
+    "queue": queue_snapshot(),
 }, separators=(",", ":")))

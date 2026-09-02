@@ -1,0 +1,16 @@
+[Unit]
+Description=Durable RTX 4060 Brain MRI CNN research queue
+After=brain-mri-cnn-rtx4060-safe-20260901.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documents/.aarav/brain
+Environment=QUEUE_WAIT_FOR_UNIT=brain-mri-cnn-rtx4060-safe-20260901.service
+ExecStart=%h/Documents/.aarav/brain/scripts/run_durable_cuda_queue.sh prototype-cnn-rtx4060-long data/manifests/glioma.pilot.4060.json training/profiles/cuda-4060-safe.yaml 100 brats:20260902 brats:20260903 brats:20260904
+Restart=on-failure
+RestartSec=30
+Nice=10
+UMask=0077
+
+[Install]
+WantedBy=default.target

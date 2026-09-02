@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import re
+from datetime import datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
@@ -248,4 +249,114 @@ class JobProposalV1(StrictModel):
             raise ValueError("non-abstaining proposal requires run_id and profile")
         if not self.abstained and self.reason_code != "exact_preapproved_match":
             raise ValueError("non-abstaining proposal requires exact_preapproved_match")
+        return self
+
+
+class StudyInputQcV1(StrictModel):
+    schema_version: Literal["research-study-validation/v1"]
+    status: Literal["pass"]
+    modality_count: Literal[4]
+    modalities: list[Literal["t1", "t1ce", "t2", "flair"]]
+    geometry_match: Literal[True]
+    shape: list[int]
+    spacing_mm: list[float]
+    geometry_sha256: Sha256
+    modality_sha256: dict[Literal["t1", "t1ce", "t2", "flair"], Sha256]
+
+    @field_validator("shape")
+    @classmethod
+    def shape_is_bounded(cls, value: list[int]) -> list[int]:
+        if len(value) != 3 or any(size < 1 or size > 512 for size in value) or math.prod(value) > 64_000_000:
+            raise ValueError("input shape exceeds the fixed inference bounds")
+        return value
+
+    @field_validator("spacing_mm")
+    @classmethod
+    def spacing_is_positive(cls, value: list[float]) -> list[float]:
+        if len(value) != 3 or any(not math.isfinite(item) or item <= 0 for item in value):
+            raise ValueError("voxel spacing must be finite and positive")
+        return value
+
+    @model_validator(mode="after")
+    def all_modality_hashes_present(self) -> StudyInputQcV1:
+        if self.modalities != ["t1", "t1ce", "t2", "flair"]:
+            raise ValueError("modalities must be in the fixed protocol order")
+        if set(self.modality_sha256) != {"t1", "t1ce", "t2", "flair"}:
+            raise ValueError("all four modality digests are required")
+        return self
+
+
+class StudySegmentationV1(StrictModel):
+    status: Literal["complete"]
+    output_sha256: Sha256
+    output_shape: list[int]
+    geometry_preserved: Literal[True]
+    labels: list[Literal[0, 1]]
+    label_count: Literal[2]
+    nonzero_voxels: int = Field(strict=True, ge=0)
+
+    @model_validator(mode="after")
+    def binary_contract_is_exact(self) -> StudySegmentationV1:
+        if len(self.output_shape) != 3 or self.labels != [0, 1]:
+            raise ValueError("segmentation must preserve a 3D binary output contract")
+        return self
+
+
+class StudyInferenceProvenanceV1(StrictModel):
+    model_id: Literal["glioma-segresnet-20260828"]
+    model_scope: Literal["internal_research_only"]
+    checkpoint_sha256: Literal[
+        "121422a861bbe7affaa5e161058e69eea737b2390651c3c03ea20256969e99e5"
+    ]
+    training_git_revision: Literal["570c65ac4709dac3b05f48314ddd5aef70589a7d"]
+    study_sha256: Literal[
+        "e53f85b429449585089133b1d9f680c3d80125b58da3042e5510522e2b333f6d"
+    ]
+    profile_sha256: Literal[
+        "9ec821920b6a08e914306d1651101dd52693d02c185f2750410297ec1c43fc7e"
+    ]
+    trainer_sha256: Literal[
+        "bf5dede3b5b1ee5d916cd6f046ca7eda8ea579f0f730db6f9201e2523b0456d9"
+    ]
+    inference_script_sha256: Sha256
+    device: str
+    torch_version: str
+    monai_version: str
+    nibabel_version: str
+    generated_at: str
+
+    @field_validator("generated_at")
+    @classmethod
+    def generated_at_is_iso8601(cls, value: str) -> str:
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as error:
+            raise ValueError("generated_at must be an ISO-8601 timestamp") from error
+        if parsed.tzinfo is None:
+            raise ValueError("generated_at must include a timezone")
+        return value
+
+
+class ResearchSegmentationResultV1(StrictModel):
+    schema_version: Literal["research-segmentation-result/v1"]
+    job_id: Uuid4String
+    study_id: Literal["glioma"]
+    protocol: Literal["glioma_4seq_v1"]
+    disclaimer: Literal[DISCLAIMER]
+    input_qc: StudyInputQcV1
+    segmentation: StudySegmentationV1
+    provenance: StudyInferenceProvenanceV1
+
+    @field_validator("job_id")
+    @classmethod
+    def job_id_is_uuid4(cls, value: str) -> str:
+        parsed = UUID(value)
+        if parsed.version != 4 or str(parsed) != value:
+            raise ValueError("job_id must be a canonical UUIDv4")
+        return value
+
+    @model_validator(mode="after")
+    def output_geometry_matches_input(self) -> ResearchSegmentationResultV1:
+        if self.segmentation.output_shape != self.input_qc.shape:
+            raise ValueError("segmentation output shape must match the validated input")
         return self

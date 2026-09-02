@@ -1,6 +1,8 @@
-# NVIDIA RTX 3060 training environment
+# NVIDIA CUDA environment
 
-This setup targets the separate RTX 3060 worker with 12 GB VRAM and 32 GB RAM.
+This setup supports the approved RTX 3060 or RTX 4060 CUDA workers. The current
+external-inference worker is an RTX 4060 with 8 GB VRAM; do not reuse a 12 GB
+training profile there without a fresh memory validation.
 It is intentionally a distinct environment from the AMD ROCm worker: do not
 install both training extras in the same virtual environment.
 
@@ -21,7 +23,8 @@ uv sync --extra cuda --python 3.12
 ```
 
 It uses the official PyTorch 2.9.1 CUDA 12.8 Linux wheel and MONAI 1.6.0, then
-verifies that PyTorch sees an RTX 3060 and completes a GPU matrix product.
+verifies that PyTorch sees an approved CUDA worker and completes a GPU matrix
+product.
 
 ## Runtime profile
 

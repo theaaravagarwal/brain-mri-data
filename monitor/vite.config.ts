@@ -13,5 +13,10 @@ export default defineConfig({
   build: {
     target: "es2022",
     sourcemap: true
+  },
+  test: {
+    environment: "jsdom",
+    setupFiles: "./tests/setup.ts",
+    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"]
   }
 });

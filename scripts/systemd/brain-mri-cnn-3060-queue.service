@@ -1,0 +1,16 @@
+[Unit]
+Description=Durable RTX 3060 Brain MRI CNN research queue
+After=brain-mri-cnn-rtx3060-20260901.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documents/brain-mri-data
+Environment=QUEUE_WAIT_FOR_UNIT=brain-mri-cnn-rtx3060-20260901.service
+ExecStart=%h/Documents/brain-mri-data/scripts/run_durable_cuda_queue.sh prototype-cnn-rtx3060-long data/manifests/glioma.pilot.full.v3.batch4.json training/profiles/cuda-batch4.yaml 100 brats:20260902 pooled:20260902 pamc:20260902
+Restart=on-failure
+RestartSec=30
+Nice=10
+UMask=0077
+
+[Install]
+WantedBy=default.target

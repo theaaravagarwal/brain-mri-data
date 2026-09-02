@@ -1,0 +1,13 @@
+schema_version: 1
+suite_id: serving-metadata-v1
+models:
+  baseline: qwen3:0.6b
+  candidate: qwen3:4b
+fixtures: benchmarks/language/serving-metadata-v1.jsonl
+gates:
+  pass_required: 6
+  total: 6
+  max_wall_seconds_per_case: 5
+  gpu_processor_required: 100% GPU
+  max_combined_vram_fraction: 0.90
+  automatic_promotion: false

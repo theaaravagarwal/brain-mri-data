@@ -7,9 +7,10 @@ from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPO = Path("/home/b/brain-mri-data")
+REPO = Path("/home/theaa/Documents/brain-mri-data")
 RUNS = REPO / "runs"
-STATE = RUNS / "amd-cnn-exploratory-20260817"
+QUEUE_STATUS = RUNS / "queue-logs" / "prototype-cnn-rtx3060-long.status.json"
+QUEUE_UNIT = "brain-mri-cnn-3060-queue.service"
 
 
 def command(args, timeout=4):
@@ -45,14 +46,16 @@ def metric_rows(path, limit=100):
 
 def process_lines():
     result = command(["ps", "-eo", "args", "--no-headers"])
-    return [line.strip() for line in result.stdout.splitlines() if "train_glioma_rocm_exploratory.py" in line]
+    markers = ("training/train_glioma.py", "nnUNetv2_train")
+    return [line.strip() for line in result.stdout.splitlines() if any(marker in line for marker in markers)]
 
 
 def active_output(processes):
     for line in processes:
         try:
             parts = shlex.split(line)
-            return Path(parts[parts.index("--output") + 1])
+            path = Path(parts[parts.index("--output") + 1])
+            return path if path.is_absolute() else REPO / path
         except (ValueError, IndexError):
             pass
     return None
@@ -120,31 +123,60 @@ def sessions():
     return [line for line in result.stdout.splitlines() if line][:12]
 
 
-def queue_state(active, session_names):
-    selections = sorted(STATE.glob("batch-selection-retry*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
-    selected = read_json(selections[0]).get("selected_batch_size") if selections else None
-    complete = sorted(STATE.glob("full-rocm-queue-complete*.state"), key=lambda p: p.stat().st_mtime, reverse=True)
-    failed = sorted(STATE.glob("benchmark-*.failed"), key=lambda p: p.stat().st_mtime, reverse=True)
-    if active:
-        return {"state": "running", "detail": f"batch {selected}" if selected else active.name}
-    if complete:
-        return {"state": "complete", "detail": complete[0].name}
-    if failed:
-        return {"state": "attention", "detail": failed[0].name}
-    return {"state": "waiting" if session_names else "idle", "detail": session_names[0] if session_names else None}
+def gpu():
+    executable = shutil.which("nvidia-smi")
+    if executable is None and Path("/usr/lib/wsl/lib/nvidia-smi").exists():
+        executable = "/usr/lib/wsl/lib/nvidia-smi"
+    fields = "name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw"
+    result = command([executable or "nvidia-smi", f"--query-gpu={fields}", "--format=csv,noheader,nounits"])
+    try:
+        values = [part.strip() for part in result.stdout.strip().split(",")]
+        return {
+            "name": values[0], "utilizationPercent": float(values[1]),
+            "memoryUsedMib": float(values[2]), "memoryTotalMib": float(values[3]),
+            "temperatureC": float(values[4]), "powerW": float(values[5]),
+            "active": float(values[1]) > 0,
+        }
+    except (IndexError, ValueError):
+        return {"name": "NVIDIA RTX 3060", "utilizationPercent": None, "memoryUsedMib": None, "memoryTotalMib": 12288, "temperatureC": None, "powerW": None, "active": bool(active)}
+
+
+def queue_snapshot():
+    value = read_json(QUEUE_STATUS)
+    service = command(["systemctl", "--user", "is-active", QUEUE_UNIT]).stdout.strip() or "unknown"
+    valid = (
+        value.get("schemaVersion") == "research-training-queue/v1"
+        and value.get("state") in {"waiting", "running", "complete", "attention"}
+        and isinstance(value.get("queuedRuns"), list)
+        and all(isinstance(run, str) for run in value["queuedRuns"])
+        and all(isinstance(value.get(key), int) for key in ("completedCount", "totalCount", "failedCount"))
+    )
+    if not valid:
+        return {
+            "state": "attention", "detail": "Queue status unavailable", "serviceState": service,
+            "currentRun": None, "queuedRuns": [], "completedCount": 0, "totalCount": 0,
+            "failedCount": 0, "updatedAt": None, "lastError": "status_unavailable",
+        }
+    current = value.get("currentRun")
+    queued = value["queuedRuns"]
+    return {
+        **value,
+        "serviceState": service,
+        "detail": current or f"{len(queued)} queued · {value['completedCount']}/{value['totalCount']} complete",
+    }
 
 
 processes = process_lines()
 active = active_output(processes)
 session_names = sessions()
-usage = shutil.disk_usage(Path("/mnt/c"))
+usage = shutil.disk_usage(REPO)
 gib = 1024**3
 print(json.dumps({
-    "id": "amd", "label": "AMD worker", "role": "Language and exploratory ROCm", "hostname": socket.gethostname(),
-    "gpu": {"name": "AMD Radeon RX 7900 XTX", "utilizationPercent": None, "memoryUsedMib": None, "memoryTotalMib": 24576, "temperatureC": None, "powerW": None, "active": bool(active)},
+    "id": "amd", "label": "RTX 3060 worker", "role": "CNN training and evaluation", "hostname": socket.gethostname(),
+    "gpu": gpu(),
     "memory": memory(), "disk": {"usedGib": usage.used / gib, "totalGib": usage.total / gib, "freeGib": usage.free / gib},
     "activeRun": run_snapshot(active, True) if active and active.exists() else None,
     "latestRun": latest_completed_run(active),
     "recentRuns": recent_runs(active), "sessions": session_names,
-    "queue": queue_state(active, session_names),
+    "queue": queue_snapshot(),
 }, separators=(",", ":")))

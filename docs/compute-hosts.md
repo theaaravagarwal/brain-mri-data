@@ -1,57 +1,51 @@
 # Compute-host runbook
 
-This file is the canonical operational reference for the project's two GPU
-workers. Keep raw MRI data and machine-specific environments local to each
-worker; synchronize only code and approved non-identifying artifacts.
+This is the canonical operational map for the private Tailscale prototype.
+Raw MRI data stays on its existing worker. Synchronize code and approved,
+non-identifying aggregate artifacts only.
 
-## NVIDIA CNN worker
+## Application and language host
 
-- SSH target: `theaa@10.0.0.65`
+- SSH: `software@100.64.0.7`
+- Repository: `/home/software/Documents/.aa/brain`
+- GPU: NVIDIA GeForce RTX 4090 Laptop GPU, 16 GB VRAM
+- Services: `brain-mri-prototype.service` and `brain-mri-ollama.service`
+- Role: application, fixed-checkpoint CNN inference, and metadata-only language
+  explanation. The LLM never receives MRI bytes, paths, or identifiers.
+- Serving checkpoint changes require frozen evaluation evidence and human review.
+
+The application binds to `100.64.0.7:4173`. The stable user entrypoint remains
+`http://100.64.0.1:4173` through the fixed Tailscale proxy.
+
+## RTX 4060 CNN worker
+
+- SSH: `software@100.64.0.1`
+- Repository: `/home/software/Documents/.aarav/brain`
+- GPU: NVIDIA GeForce RTX 4060, 8 GB VRAM
+- Role: reproducible BraTS CNN training with the `cuda-4060-safe` profile
+- Queue: `brain-mri-cnn-4060-queue.service`
+- Proxy: `brain-mri-tailnet-proxy.service`
+
+`/home/software/Documents/.aa/brain` does not exist on this host. Do not deploy
+training or proxy files there.
+
+## RTX 3060 CNN worker
+
+- SSH: `theaa@100.64.0.3`
 - Repository: `/home/theaa/Documents/brain-mri-data`
-- GPU: NVIDIA RTX 3060, 12 GB VRAM
-- Environment: `uv sync --extra cuda`
-- Role: the sole CNN training worker, including frozen studies and bounded
-  patch-sampling screens
-- Current production loader profile: batch 4, eight workers, prefetch factor 2,
-  persistent workers, and the indexed chunk cache
-- Language-transfer role: construct aggregate-only JSON envelopes and push them
-  one-way to AMD. Never transfer MRI data, case-level metrics, paths, or free text.
-- Dedicated language-transfer identity:
-  `runs/language-transport/brain_mri_language_ed25519`; the private key is
-  Git-ignored and valid only for AMD's forced ingest command.
+- GPU: NVIDIA GeForce RTX 3060, 12 GB VRAM
+- Role: independent BraTS, pooled, and PAMC training/evaluation
+- Queue: `brain-mri-cnn-3060-queue.service`
 
-## AMD research-language worker
+The worker may not have `nvidia-smi` on its interactive shell `PATH`; the
+collector resolves the WSL NVIDIA binary explicitly.
 
-- SSH target: `b@100.64.0.5`
-- Repository: `~/brain-mri-data` (`/home/b/brain-mri-data`)
-- GPU: AMD Radeon RX 7900 XTX, 24 GB VRAM
-- Environment: `uv sync --extra amd`; never combine it with the CUDA extra
-- Role: primarily GPU-backed research-language experiments, not CNN study arms
-- Language inbox: `runs/language-inbox`; it accepts only the strict aggregate
-  envelope through a forced, restricted SSH command. AMD never pulls from or
-  holds credentials for the NVIDIA worker.
-- Constraint: the host CPU is severely throttled. Avoid CPU-heavy preprocessing,
-  large loader-worker counts, CPU inference fallback, and unbounded compilation.
-  Verify that a workload is actually GPU-backed before leaving it running.
+## Operating rules
 
-The AMD environment was last checked on 2026-08-15 with PyTorch
-`2.9.1+rocm7.2.0.git7e1940d4`; it reported HIP 7.2 and enumerated one RX 7900
-XTX through `torch.cuda`'s ROCm-compatible API. Re-run the lightweight verifier
-after changing the lockfile or environment rather than assuming this remains
-true.
-
-## WSL restart safety rule
-
-Never run `wsl --shutdown` on either remotely administered worker. If the AMD
-worker's WSL instance genuinely must be restarted, reboot the complete Windows
-host instead; WSL is registered as a startup task and should return after the
-host boots. Notify the owner and record the reason before rebooting. A host
-reboot is an exceptional recovery action, not a routine training step.
-
-## Language inbox service
-
-After code and environment validation, install the versioned user units with
-`scripts/install_language_inbox_service.sh`. This writes only user-systemd
-configuration and starts `brain-mri-language.path`; it does not restart WSL or
-Windows. The service is a low-CPU, event-driven oneshot and leaves Ollama as the
-only persistent language process.
+- Run independent experiments per host; do not use cross-host DDP.
+- Keep run directories immutable and preserve incomplete failures.
+- Never promote a checkpoint automatically or tune against a locked external
+  cohort.
+- Keep the serving checkpoint available while experimental queues run.
+- Do not reboot a worker for routine recovery. Record and report any exceptional
+  host restart before taking it.

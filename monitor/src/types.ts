@@ -54,7 +54,19 @@ export type HostData = {
   latestRun: RunSnapshot | null;
   recentRuns: RecentRun[];
   sessions: string[];
-  queue: { state: string; detail: string | null };
+  queue: {
+    schemaVersion?: "research-training-queue/v1";
+    state: "waiting" | "running" | "complete" | "attention";
+    detail: string | null;
+    serviceState: string;
+    currentRun: string | null;
+    queuedRuns: string[];
+    completedCount: number;
+    totalCount: number;
+    failedCount: number;
+    updatedAt: string | null;
+    lastError: string | null;
+  };
 };
 
 export type HostEnvelope = {
@@ -73,4 +85,133 @@ export type DashboardSnapshot = {
   generatedAt: string;
   pollIntervalMs: number;
   hosts: { nvidia: HostEnvelope; amd: HostEnvelope };
+};
+
+export type ResourceEnvelope<T> = {
+  schemaVersion: string;
+  generatedAt: string;
+  source: { status: "fresh" | "stale" | "unavailable" | "rejected"; staleSince: string | null; error: string | null };
+  artifactDigest: string | null;
+  data: T | null;
+};
+
+export type EvidenceResource = {
+  studyId: "glioma";
+  protocol: "glioma_4seq_v1";
+  evaluationScope: string;
+  reviewStatus: string;
+  automaticPromotion: false;
+  promotion: { status: "blocked" | "pending" | "rejected" | "selected"; missing: string[] };
+  selectedModel?: Record<string, unknown>;
+  baseline: Record<string, unknown>;
+  candidates: Record<string, unknown>[];
+  comparison?: Record<string, unknown>;
+};
+
+export type ExplanationResource = {
+  deterministic: Record<string, unknown>;
+  llm: { status: "validated" | "abstained" | "rejected" | "unavailable"; artifact: Record<string, unknown> | null; reason: string | null };
+};
+
+export type ProposalResource = {
+  jobs: Record<string, unknown>[];
+  proposals: Record<string, unknown>[];
+};
+
+export type StudyCapabilities = {
+  schemaVersion: "research-study-capabilities/v1";
+  generatedAt: string;
+  inference: {
+    status: "ready" | "unavailable" | "digest_mismatch";
+    modelId: string;
+    modelScope: "internal_research_only";
+    checkpointSha256: string;
+    observedCheckpointSha256: string | null;
+    outputKind: string;
+    device: string;
+  };
+  explanation: {
+    deterministic: "available";
+    llm: "configured" | "not_configured";
+    model: string | null;
+  };
+  limits: { files: 4; perFileBytes: number; totalBytes: number; retentionHours: number };
+};
+
+export type StudyValidation = {
+  schema_version: "research-study-validation/v1";
+  status: "pass";
+  modality_count: 4;
+  modalities: ["t1", "t1ce", "t2", "flair"];
+  geometry_match: true;
+  shape: [number, number, number];
+  spacing_mm: [number, number, number];
+  geometry_sha256: string;
+  modality_sha256: Record<"t1" | "t1ce" | "t2" | "flair", string>;
+};
+
+export type StudyExplanation = {
+  schema_version: "research-segmentation-explanation/v1";
+  deterministic: {
+    disclaimer: string;
+    summary: string;
+    evidence: Array<{ field: string; value: string | number | boolean | null }>;
+    limitations: string;
+    abstained: false;
+  };
+  llm: {
+    status: "validated" | "rejected" | "unavailable";
+    artifact: null | {
+      disclaimer: string;
+      summary: string;
+      evidence: Array<{ field: string; value: string | number | boolean | null }>;
+      limitations: string;
+      abstained: false;
+    };
+    reason: string | null;
+    model_name: string | null;
+    model_digest: string | null;
+  };
+};
+
+export type StudyJob = {
+  schemaVersion: "research-study-job/v1";
+  jobId: string;
+  state: "validated" | "running" | "succeeded" | "failed";
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string;
+  validation: StudyValidation | null;
+  result: null | {
+    schema_version: "research-segmentation-result/v1";
+    disclaimer: string;
+    input_qc: StudyValidation;
+    segmentation: {
+      status: "complete";
+      output_sha256: string;
+      output_shape: [number, number, number];
+      geometry_preserved: true;
+      labels: [0, 1];
+      label_count: 2;
+      nonzero_voxels: number;
+    };
+    provenance: {
+      model_id: string;
+      model_scope: "internal_research_only";
+      checkpoint_sha256: string;
+      training_git_revision: string;
+      study_sha256: string;
+      profile_sha256: string;
+      trainer_sha256: string;
+      inference_script_sha256: string;
+      device: string;
+      torch_version: string;
+      monai_version: string;
+      nibabel_version: string;
+      generated_at: string;
+    };
+  };
+  explanation: StudyExplanation | null;
+  error: string | null;
+  artifacts: Array<"segmentation" | "receipt" | "explanation">;
 };

@@ -11,8 +11,8 @@ if ! command -v nvidia-smi >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! nvidia-smi --query-gpu=name --format=csv,noheader | grep -qi "RTX 3060"; then
-  echo "Expected an RTX 3060 worker; inspect the selected CUDA training profile before continuing." >&2
+if ! nvidia-smi --query-gpu=name --format=csv,noheader | grep -Eqi "RTX (3060|4060)"; then
+  echo "Expected an approved RTX 3060 or RTX 4060 CUDA worker; inspect the selected training profile before continuing." >&2
   exit 1
 fi
 

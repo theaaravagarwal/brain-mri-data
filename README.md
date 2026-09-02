@@ -68,12 +68,12 @@ uv run brain-mri-data export-monai brats2020_kaggle
 With the available 1-TB budget, `glioma_train_plus_locked_external_1tb` is a
 useful acquisition-budget profile (about 251 GB raw), leaving room for
 downloads, preprocessing caches, checkpoints, and transfer packaging. It is
-not an experimental allocation. The ISEF study configuration is authoritative:
-train on BraTS 2020, UTSW-Glioma, and UCSF-PDGM; lock BraTS-Africa as the
-domain-shift external cohort; exclude UPENN-GBM until its potential BraTS
-lineage overlap has a documented review. Do not use an unverified mirror or a
-2D slice dataset as an independent test set: catalog it as `auxiliary_2d`
-only, because it may overlap a primary BraTS release.
+not an experimental allocation. It belongs to the historical PAMC plan and is
+not the current study allocation. The proposed current extension evaluates six
+already frozen Product V2 checkpoints on one locked BraTS-Africa cohort; it
+does not add a training source or permit retraining. Do not use an unverified
+mirror or a 2D slice dataset as an independent test set: catalog it as
+`auxiliary_2d` only, because it may overlap a primary BraTS release.
 
 The catalog also includes `manual_tcia` sources. These are high-value datasets
 whose official portals sometimes require TCIA tools or Aspera; download them
@@ -124,38 +124,25 @@ See `docs/architecture.md` for the training path and `docs/data-plan.md` for
 the project plan. See `docs/multitumor-scope-audit.md` for the consequences of
 expanding beyond glioma.
 
-## ISEF study workflow
+## Frozen external evaluation workflow
 
-The competition study is intentionally one adult-glioma question: whether
-provenance-audited source-diverse training and PAMC (provenance-aware modality
-consistency) improve locked external segmentation. It does not include multi-tumor routing,
-an LLM, or a diagnostic application.
+The current study asks whether a hierarchical nesting penalty improves
+adult-glioma segmentation across three seeds. The internal result rejected that
+candidate. See the [study scope](docs/product-v2-study-scope.md).
 
-After a human review approves each source's whole-lesion label mapping and
-provenance evidence, lock the study rather than assembling cohorts in training
-code:
+No additional training is part of this track. Before external inference, run
+the readiness report:
 
 ```bash
-uv run brain-mri-data build-study config/studies/glioma.yaml --output glioma.locked.json
-
-uv run brain-mri-data runs list config/run-matrix/glioma.yaml
-uv run brain-mri-data runs claim config/run-matrix/glioma.yaml glioma--cuda--brats--20260812 --profile cuda
+brain-mri-data external-readiness \
+  config/analysis/product-v2-external-readiness.yaml --strict
 ```
 
-Use a controller-side `data/experiments/` directory for claims. Workers should
-claim jobs through Tailscale/SSH and synchronize only run artifacts, never raw
-MRI volumes.
-
-After the study has been locked, claim and start a PAMC run with:
-
-```bash
-./scripts/run_glioma_job.sh pamc 20260812
-```
-
-PAMC is the research contribution: it combines source-adversarial features
-with a consistency loss after one MRI sequence is intentionally masked. It is
-evaluated on a locked external cohort both with all four sequences and under
-the controlled masking condition; it is not a diagnosis system or an LLM.
+The command fails until the label mapping, provenance review, source manifests,
+QC, and immutable external lock are present. The complete sequence is in the
+[external-evaluation runbook](docs/product-v2-external-evaluation-runbook.md).
+It is an inference-only research comparison, not a diagnosis system, clinical
+validation, or LLM study.
 # CUDA pilot run
 
 Use CUDA for every CNN pilot and frozen CNN study run. The AMD worker is not a

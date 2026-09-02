@@ -13,39 +13,56 @@ Node.js gateway for local serving and fixed, read-only SSH collection.
 
 ## Users
 
-The repository owner, checking two private GPU workers from the current Mac
-during training and evaluation work.
+The repository owner and research collaborators running one study at a time on
+the private NVIDIA research worker.
 
 ## Product Purpose
 
-Show the NVIDIA and AMD workers' current reachability, GPU load, storage,
-training progress, queue state, and recorded metrics in one glance. Success
-means the user can tell what is running, whether it is healthy, how far it has
-progressed, and when the information was last confirmed.
+Accept exactly four MRI modalities (T1, T1ce, T2, and FLAIR), validate their
+identity and geometry, run one fixed CNN locally, and return a segmentation,
+an exact model/checkpoint receipt, and a research-only metadata explanation.
+Success means no inference can begin before validation passes, every result is
+traceable to the frozen checkpoint, and the language model never receives scan
+voxels or creates clinical conclusions.
 
 ## Positioning
 
-The dashboard reads the project's existing provenance-rich run artifacts and
-host telemetry through fixed Tailscale SSH targets, while remaining local,
-read-only, and useful during intermittent connectivity.
+The study workflow is the primary product. Existing worker telemetry, model
+evidence, explanations, and review-only proposals remain secondary views for
+research operations. Processing stays on the private NVIDIA worker and remains
+useful without the optional local language model through a deterministic
+validated explanation.
 
 ## Operating Context
 
-The dashboard runs on the repository owner's Mac. It observes the NVIDIA CNN
-worker at `theaa@100.64.0.3` and the AMD research worker at `b@100.64.0.5`.
-Connections may be unstable, so the last successful snapshot must remain
-visible with an explicit age and error state.
+The browser reaches a gateway bound only to the NVIDIA worker's exact Tailscale
+address (or loopback for local development). The NVIDIA CNN worker is the sole inference target. The
+AMD research worker may be offline and is not required for this workflow.
+Operational telemetry can still show last-known values with explicit age and
+error state.
 
 ## Capabilities and Constraints
 
-- Bind only to localhost and expose no training controls.
+- Bind only to loopback or an explicit Tailscale IPv4 address and expose no
+  training controls; mutation routes reject non-tailnet clients and mismatched
+  Host/Origin headers.
+- Accept exactly one `.nii.gz` file for each of T1, T1ce, T2, and FLAIR, with
+  streaming per-file and total-size limits.
+- Require matching shape, affine geometry, finite voxels, and bounded volume
+  dimensions before inference.
+- Run only `glioma-segresnet-20260828` with the allowlisted checkpoint SHA-256;
+  recheck the digest for every inference and permit one GPU job at a time.
+- Return a binary research segmentation plus machine-readable receipt and
+  explanation artifacts; preserve the source geometry in the output.
+- Give the optional local LLM validated result metadata only. Reject its output
+  unless it preserves the evidence fields and contains no clinical claim.
+- Remove uploaded volumes after processing and expire result artifacts after
+  24 hours; allow the user to clear results sooner.
 - Use fixed, allowlisted SSH targets and commands; browser input never becomes
   a command, path, or host name.
-- Never modify either worker, restart WSL, or transfer MRI data.
+- Never send MRI data to the language model or any external service.
 - Keep network traffic and dependencies small; reuse SSH connections and poll
   conservatively.
-- Keep all implementation and documentation inside `monitor/` and leave it
-  uncommitted.
 
 ## Brand Commitments
 
@@ -60,11 +77,12 @@ must not invent missing measurements.
 
 ## Product Principles
 
-- Freshness is part of every measurement.
-- Preserve the last known truth instead of replacing it with an empty error.
-- Put active work and failures before historical detail.
-- Prefer one dependable read-only path over operational controls.
-- Make dense scientific values scan quickly without hiding their units.
+- Validation is a hard gate, not a visual hint.
+- A result is inseparable from its exact model and checkpoint receipt.
+- The deterministic explanation is always available; LLM rendering is
+  optional and subordinate to validated metadata.
+- Research limitations appear with the result, never behind a tooltip.
+- Freshness remains part of every operational measurement.
 
 ## Accessibility & Inclusion
 

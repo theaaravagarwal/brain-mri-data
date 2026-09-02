@@ -13,9 +13,13 @@ from brain_mri_data.language_bench import (
 from brain_mri_data.language_contracts import JobProposalV1
 from brain_mri_data.language_gateway import (
     build_explainer_prompt,
+    deterministic_result_explanation,
+    result_explainer_prompt,
     validate_explanation,
     validate_job_proposal,
+    validate_result_explanation,
 )
+from brain_mri_data.language_contracts import ResearchSegmentationResultV1
 from brain_mri_data.language_ollama import planner_prompt, safe_planner_prompt
 
 
@@ -34,7 +38,93 @@ def record(status: str = "complete") -> dict:
     }
 
 
+def serving_result() -> ResearchSegmentationResultV1:
+    return ResearchSegmentationResultV1.model_validate(
+        {
+            "schema_version": "research-segmentation-result/v1",
+            "job_id": "65ecf1c3-ae23-4c40-ae7f-6aecc9453904",
+            "study_id": "glioma",
+            "protocol": "glioma_4seq_v1",
+            "disclaimer": "Research output only; not a diagnosis or treatment recommendation.",
+            "input_qc": {
+                "schema_version": "research-study-validation/v1",
+                "status": "pass",
+                "modality_count": 4,
+                "modalities": ["t1", "t1ce", "t2", "flair"],
+                "geometry_match": True,
+                "shape": [240, 240, 155],
+                "spacing_mm": [1.0, 1.0, 1.0],
+                "geometry_sha256": "a" * 64,
+                "modality_sha256": {
+                    "t1": "b" * 64,
+                    "t1ce": "c" * 64,
+                    "t2": "d" * 64,
+                    "flair": "e" * 64,
+                },
+            },
+            "segmentation": {
+                "status": "complete",
+                "output_sha256": "f" * 64,
+                "output_shape": [240, 240, 155],
+                "geometry_preserved": True,
+                "labels": [0, 1],
+                "label_count": 2,
+                "nonzero_voxels": 42117,
+            },
+            "provenance": {
+                "model_id": "glioma-segresnet-20260828",
+                "model_scope": "internal_research_only",
+                "checkpoint_sha256": "121422a861bbe7affaa5e161058e69eea737b2390651c3c03ea20256969e99e5",
+                "training_git_revision": "570c65ac4709dac3b05f48314ddd5aef70589a7d",
+                "study_sha256": "e53f85b429449585089133b1d9f680c3d80125b58da3042e5510522e2b333f6d",
+                "profile_sha256": "9ec821920b6a08e914306d1651101dd52693d02c185f2750410297ec1c43fc7e",
+                "trainer_sha256": "bf5dede3b5b1ee5d916cd6f046ca7eda8ea579f0f730db6f9201e2523b0456d9",
+                "inference_script_sha256": "1" * 64,
+                "device": "NVIDIA GeForce RTX 4060",
+                "torch_version": "2.9.1+cu128",
+                "monai_version": "1.6.0",
+                "nibabel_version": "5.4.2",
+                "generated_at": "2026-08-31T12:00:00Z",
+            },
+        }
+    )
+
+
 class LanguageGatewayTests(unittest.TestCase):
+    def test_new_study_explanation_uses_metadata_without_accuracy_claims(self) -> None:
+        result = serving_result()
+        explanation = deterministic_result_explanation(result)
+        self.assertIn("42117 non-zero output voxels", explanation["summary"])
+        self.assertIn("No reference mask was supplied", explanation["limitations"])
+        self.assertNotIn("dice", explanation["summary"].lower())
+        prompt = result_explainer_prompt(result)
+        self.assertNotIn("modality_sha256", prompt)
+        self.assertNotIn("spacing_mm", prompt)
+        self.assertIn(json.dumps(explanation["limitations"]), prompt)
+
+    def test_new_study_explanation_requires_exact_evidence(self) -> None:
+        result = serving_result()
+        explanation = deterministic_result_explanation(result)
+        self.assertEqual(validate_result_explanation(explanation, result), explanation)
+        altered = json.loads(json.dumps(explanation))
+        altered["evidence"][0]["value"] = "fail"
+        with self.assertRaisesRegex(ValueError, "exactly match"):
+            validate_result_explanation(altered, result)
+        altered = json.loads(json.dumps(explanation))
+        altered["limitations"] = "800"
+        with self.assertRaisesRegex(ValueError, "limitations"):
+            validate_result_explanation(altered, result)
+        altered = json.loads(json.dumps(explanation))
+        altered["summary"] = "Different metadata summary."
+        with self.assertRaisesRegex(ValueError, "summary"):
+            validate_result_explanation(altered, result)
+
+    def test_new_study_result_rejects_output_geometry_mismatch(self) -> None:
+        value = serving_result().model_dump(mode="json")
+        value["segmentation"]["output_shape"] = [240, 240, 154]
+        with self.assertRaisesRegex(ValueError, "output shape"):
+            ResearchSegmentationResultV1.model_validate(value)
+
     def test_prompt_rejects_raw_image_path(self) -> None:
         unsafe = record()
         unsafe["image"] = "/raw/scan.nii.gz"
@@ -50,6 +140,12 @@ class LanguageGatewayTests(unittest.TestCase):
         abstention_prompt = build_explainer_prompt(record(status="abstain"))
         self.assertNotIn('"segmentation.whole_lesion_dice"', abstention_prompt)
         self.assertIn('"segmentation.status"', abstention_prompt)
+
+        no_reference = record()
+        no_reference["segmentation"].pop("whole_lesion_dice")
+        no_reference_prompt = build_explainer_prompt(no_reference)
+        self.assertNotIn('"segmentation.whole_lesion_dice"', no_reference_prompt)
+        self.assertIn('"segmentation.status"', no_reference_prompt)
 
     def test_explanation_rejects_clinical_claim(self) -> None:
         response = {

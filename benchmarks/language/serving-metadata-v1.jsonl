@@ -1,0 +1,6 @@
+{"id":"empty-output","job_id":"0510dbae-5bfa-4b89-9925-5ac22d058ed7","shape":[64,64,64],"spacing_mm":[1.0,1.0,1.0],"nonzero_voxels":0}
+{"id":"single-voxel","job_id":"7485bb29-38f6-460f-a0b4-36039157be34","shape":[64,64,64],"spacing_mm":[1.0,1.0,1.0],"nonzero_voxels":1}
+{"id":"typical-output","job_id":"6f399b22-3dcc-4fbf-afb4-c911740e6ed2","shape":[240,240,155],"spacing_mm":[1.0,1.0,1.0],"nonzero_voxels":42117}
+{"id":"verified-output","job_id":"03e3681c-2cc8-4ed9-b4ed-61158423cb38","shape":[240,240,155],"spacing_mm":[1.0,1.0,1.0],"nonzero_voxels":241575}
+{"id":"anisotropic-output","job_id":"135d5d0c-063a-4bbf-b3b8-0e88cd87d1f9","shape":[192,192,96],"spacing_mm":[0.8,0.8,2.0],"nonzero_voxels":98304}
+{"id":"dense-output","job_id":"f385bd57-7621-47fa-9585-2a1a674fa7bd","shape":[128,160,96],"spacing_mm":[1.2,1.2,1.2],"nonzero_voxels":1966079}

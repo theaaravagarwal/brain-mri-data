@@ -41,7 +41,7 @@
           { "name": "glioma-pilot-v4-uniform-control-retry1--cuda--brats--20260813--e10", "seed": 20260813, "status": "complete", "bestEpoch": 9, "bestDice": 0.8372, "bestBoxIou": 0.5752, "bestHd95Mm": 19.8, "modifiedAt": "2026-08-17T08:40:00.000Z" }
         ],
         "sessions": ["uniform-controls-retry1", "uniform-controls-retry1-analysis", "nvidia-post-controls-cleanup"],
-        "queue": { "state": "running", "detail": "uniform-controls-retry1" }
+        "queue": { "schemaVersion": "research-training-queue/v1", "state": "running", "detail": "uniform-controls-retry1", "serviceState": "active", "currentRun": "uniform-controls-retry1", "queuedRuns": ["brats-seed-2", "brats-seed-3"], "completedCount": 0, "totalCount": 3, "failedCount": 0, "updatedAt": "2026-08-17T10:00:00.000Z", "lastError": null }
       },
       "lastSuccessAt": "2026-08-17T10:00:00.000Z",
       "staleSince": null,
@@ -64,7 +64,7 @@
         "latestRun": null,
         "recentRuns": [],
         "sessions": [],
-        "queue": { "state": "attention", "detail": "benchmark-r4-b4.failed" }
+        "queue": { "schemaVersion": "research-training-queue/v1", "state": "attention", "detail": "benchmark-r4-b4.failed", "serviceState": "failed", "currentRun": null, "queuedRuns": [], "completedCount": 0, "totalCount": 1, "failedCount": 1, "updatedAt": "2026-08-17T10:00:00.000Z", "lastError": "preserved_failure" }
       },
       "lastSuccessAt": "2026-08-17T10:00:00.000Z",
       "staleSince": null,

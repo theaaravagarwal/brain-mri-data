@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "research-evidence/v1",
+  "generatedAt": "2026-08-28T02:28:57.011766+00:00",
+  "source": {
+    "status": "fresh",
+    "staleSince": null,
+    "error": null
+  },
+  "artifactDigest": "b51e2d6ef2b8795d48bde77c1e02cfecf2846f660e615883808bda71ce5b8115",
+  "data": {
+    "studyId": "glioma",
+    "protocol": "glioma_4seq_v1",
+    "evaluationScope": "internal_validation",
+    "reviewStatus": "candidate_rejected_baseline_retained",
+    "automaticPromotion": false,
+    "promotion": {
+      "status": "rejected",
+      "missing": [
+        "independent external evaluation"
+      ],
+      "rationale": "Nesting candidate rejected: the primary effect was negative, its interval crossed zero, two of three seed effects were negative, and the frozen guardrails failed. Baseline retained for internal research use."
+    },
+    "selectedModel": {
+      "variantId": "baseline",
+      "seed": 20260821,
+      "readiness": "internal_research_only",
+      "architecture": "nnU-Net residual encoder U-Net",
+      "trainer": "nnUNetTrainerProductV2Confirm250",
+      "dataset": "BraTS internal development split, Dataset503, fold 0",
+      "checkpointSha256": "b3c965131175bbc58da69bcc9170bfdfec095860b6205cf771a35a68968f92a4",
+      "sourceRevision": "5ca4e757a54443716b60d170eba51cc16c1e4b11",
+      "analysisPlanSha256": "44eff64bf46d81dbc5f34cb27621b1f31aa21140ddf169651f095d223c11923f"
+    },
+    "baseline": {
+      "variantId": "baseline",
+      "trainer": "nnUNetTrainerProductV2Confirm250",
+      "metrics": {
+        "wholeTumorDice": 0.9035422791982085,
+        "tumorCoreDice": 0.873714899585769,
+        "enhancingTumorDice": 0.7680373391234726,
+        "wholeTumorIou": 0.8409029438242649,
+        "smallestQuartileWholeTumorDice": 0.7799254242507428,
+        "meanDerivedBoxIou": 0.7711323551910564,
+        "meanHd95Mm": 4.204188964325699
+      },
+      "seedMetrics": [
+        { "seed": 20260821, "wholeTumorDice": 0.9063487457100826 },
+        { "seed": 20260822, "wholeTumorDice": 0.9004046703741697 },
+        { "seed": 20260823, "wholeTumorDice": 0.9038734215103733 }
+      ]
+    },
+    "candidates": [
+      {
+        "variantId": "nesting_penalty",
+        "trainer": "nnUNetTrainerProductV2Nesting250",
+        "decision": "rejected",
+        "metrics": {
+          "wholeTumorDice": 0.9028191865144006,
+          "tumorCoreDice": 0.85987722363464,
+          "enhancingTumorDice": 0.7638045666245756,
+          "wholeTumorIou": 0.8397172859357243,
+          "smallestQuartileWholeTumorDice": 0.7801225716076101,
+          "meanDerivedBoxIou": 0.7688313094776189,
+          "meanHd95Mm": 4.676940381531131
+        },
+        "seedMetrics": [
+          { "seed": 20260821, "wholeTumorDice": 0.9043323336496872 },
+          { "seed": 20260822, "wholeTumorDice": 0.9006879225870662 },
+          { "seed": 20260823, "wholeTumorDice": 0.9034373033064483 }
+        ]
+      }
+    ],
+    "comparison": {
+      "nCases": 53,
+      "nSeeds": 3,
+      "bootstrapMethod": "case-cluster percentile bootstrap conditional on three seeds",
+      "effects": [
+        { "metricId": "whole_tumor_dice", "direction": "higher_is_better", "delta": -0.0007230926838079322, "ci95": [-0.001959608649099155, 0.0005021327969130638], "exploratory": false },
+        { "metricId": "tumor_core_dice", "direction": "higher_is_better", "delta": -0.013837675951128961, "ci95": [-0.03183180175753384, -0.0013480931547406436], "exploratory": true },
+        { "metricId": "enhancing_tumor_dice", "direction": "higher_is_better", "delta": -0.0042327724988969915, "ci95": [-0.011641264246655137, 0.001756257484802155], "exploratory": true },
+        { "metricId": "whole_tumor_box_iou", "direction": "higher_is_better", "delta": -0.0023010457134374036, "ci95": [-0.008350789996316511, 0.003591607530779991], "exploratory": true },
+        { "metricId": "whole_tumor_hd95_mm", "direction": "lower_is_better", "delta": 0.4727514172054329, "ci95": [0.02580879610243247, 1.2896371809713199], "exploratory": true }
+      ]
+    }
+  }
+}

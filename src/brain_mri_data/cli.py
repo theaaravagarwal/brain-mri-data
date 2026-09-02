@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .catalog import get_source, load_catalog, project_root
 from .experiment_audit import audit_experiment
+from .external_readiness import assess_external_readiness
 from .fetch import fetch_automatic, fetch_source
 from .indexer import (
     discover_source,
@@ -114,6 +115,14 @@ def main() -> None:
         "results", nargs="+", help="external.json artifacts from completed frozen runs"
     )
     analyze.add_argument("--output", required=True)
+    readiness = sub.add_parser(
+        "external-readiness",
+        help="fail-closed readiness report for frozen Product V2 external evaluation",
+    )
+    readiness.add_argument("readiness_config")
+    readiness.add_argument(
+        "--strict", action="store_true", help="exit nonzero while any gate is unresolved"
+    )
     runs = sub.add_parser("runs")
     run_sub = runs.add_subparsers(dest="runs_command", required=True)
     run_list = run_sub.add_parser("list")
@@ -234,6 +243,17 @@ def main() -> None:
         except (FileExistsError, ValueError) as error:
             parser.error(str(error))
         print(json.dumps(report, indent=2, sort_keys=True))
+        return
+    if args.command == "external-readiness":
+        try:
+            report = assess_external_readiness(
+                Path(args.readiness_config), project_root()
+            )
+        except (OSError, TypeError, ValueError) as error:
+            parser.error(str(error))
+        print(json.dumps(report, indent=2, sort_keys=True))
+        if args.strict and report["status"] != "ready_for_external_inference":
+            raise SystemExit(2)
         return
     if args.command == "runs":
         matrix_path = Path(args.matrix_config)

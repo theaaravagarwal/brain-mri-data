@@ -48,6 +48,8 @@ wandb/
 
 # Local agent/runtime state
 .runtime/
+.playwright-cli/
+output/
 *.tsbuildinfo
 
 # Credentials and local configuration
