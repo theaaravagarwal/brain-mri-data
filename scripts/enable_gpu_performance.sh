@@ -14,4 +14,5 @@ sudo install -m 0644 "$unit" /etc/systemd/system/brain-mri-gpu-performance.servi
 sudo systemctl daemon-reload
 sudo systemctl enable --now brain-mri-gpu-performance.service
 printf 'Platform profile: %s\n' "$(powerprofilesctl get)"
+printf 'Battery charge mode: %s\n' "$(cat /sys/class/power_supply/BAT0/charge_types)"
 nvidia-smi -q -d POWER | grep -E "Average Power Draw|Current Power Limit|Max Power Limit" | head -3
