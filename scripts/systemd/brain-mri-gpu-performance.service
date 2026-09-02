@@ -1,5 +1,5 @@
 [Unit]
-Description=Brain MRI RTX 4090 performance power limit
+Description=Brain MRI Lenovo maximum-power and battery-care settings
 After=multi-user.target
 
 [Service]
@@ -7,7 +7,6 @@ Type=oneshot
 ExecStart=/bin/sh -c 'printf max-power > /sys/firmware/acpi/platform_profile'
 ExecStart=/bin/sh -c 'printf Long_Life > /sys/class/power_supply/BAT0/charge_types'
 ExecStart=/usr/bin/nvidia-smi -pm 1
-ExecStart=/usr/bin/nvidia-smi -pl 175
 RemainAfterExit=yes
 
 [Install]
