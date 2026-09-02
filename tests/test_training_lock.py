@@ -4,8 +4,10 @@ import unittest
 import json
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from training.train_glioma import (
+    loader,
     training_patch_sampling,
     validate_cnn_accelerator,
     validate_exploratory_rocm,
@@ -90,6 +92,20 @@ class TrainingLockTests(unittest.TestCase):
             self.assertEqual(payload["phase"], "training")
             self.assertEqual(payload["batches_complete"], 3)
             self.assertEqual(payload["schema_version"], 1)
+
+    @patch("training.train_glioma.DataLoader")
+    @patch("training.train_glioma.Dataset")
+    def test_validation_loader_can_bound_and_release_workers(self, dataset, data_loader) -> None:
+        profile = {
+            "num_workers": 16,
+            "persistent_workers": True,
+            "pin_memory": True,
+            "prefetch_factor": 2,
+        }
+        loader([], object(), profile, False, workers=2, persistent_workers=False)
+        dataset.assert_called_once()
+        self.assertEqual(data_loader.call_args.kwargs["num_workers"], 2)
+        self.assertFalse(data_loader.call_args.kwargs["persistent_workers"])
 
     def test_patch_sampling_is_study_locked_and_validated(self) -> None:
         self.assertEqual(training_patch_sampling(self.study)["foreground_probability"], 0.0)

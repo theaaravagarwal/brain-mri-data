@@ -83,6 +83,8 @@ def load_profile(path: Path) -> dict[str, Any]:
         raise ValueError(f"Invalid runtime profile: {path}")
     if int(profile["batch_size"]) < 1 or profile["effective_batch_size"] % profile["batch_size"]:
         raise ValueError("This trainer requires a positive batch size and integral accumulation")
+    if int(profile["num_workers"]) < 0 or int(profile.get("validation_num_workers", 0)) < 0:
+        raise ValueError("Worker counts must be non-negative")
     return profile
 
 
@@ -230,12 +232,15 @@ def loader(
     profile: dict[str, Any],
     shuffle: bool,
     batch_size: int = 1,
+    workers: int | None = None,
+    persistent_workers: bool | None = None,
 ) -> DataLoader:
-    workers = int(profile["num_workers"])
+    workers = int(profile["num_workers"] if workers is None else workers)
+    keep_workers = bool(profile.get("persistent_workers", True)) if persistent_workers is None else persistent_workers
     options: dict[str, Any] = {
         "num_workers": workers,
         "pin_memory": bool(profile["pin_memory"]),
-        "persistent_workers": workers > 0,
+        "persistent_workers": workers > 0 and keep_workers,
     }
     if workers:
         options["prefetch_factor"] = int(profile["prefetch_factor"])
@@ -396,9 +401,16 @@ def main(*, exploratory_rocm: bool = False) -> None:
         train_loader = loader(
             train_items, make_transforms(True, patch_size), profile, True, int(profile["batch_size"]),
         )
-    val_loader = loader(val_items, make_transforms(False, patch_size), profile, False)
+    validation_workers = int(profile.get("validation_num_workers", profile["num_workers"]))
+    val_loader = loader(
+        val_items, make_transforms(False, patch_size), profile, False,
+        workers=validation_workers, persistent_workers=False,
+    )
     external_loader = (
-        loader(external_items, make_transforms(False, patch_size), profile, False)
+        loader(
+            external_items, make_transforms(False, patch_size), profile, False,
+            workers=validation_workers, persistent_workers=False,
+        )
         if external_items
         else None
     )

@@ -5,9 +5,10 @@ expected_gpu_name_contains: RTX 4090
 mixed_precision: fp16
 batch_size: 4
 effective_batch_size: 4
-num_workers: 8
+num_workers: 16
+validation_num_workers: 2
 prefetch_factor: 2
 persistent_workers: true
 pin_memory: true
 patch_size: [80, 80, 80]
-notes: Dual-queue profile with eight workers per run; measured 16-worker runs exhaust 32 GiB host RAM and trigger systemd-oomd while the locked effective batch size remains four
+notes: Dual-queue profile using all 32 logical CPUs during training while bounding non-persistent validation workers to prevent measured systemd-oomd failures; locked effective batch size remains four
