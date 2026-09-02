@@ -3,11 +3,11 @@ profile_id: cuda-4090-throughput
 accelerator: cuda
 expected_gpu_name_contains: RTX 4090
 mixed_precision: fp16
-batch_size: 8
-effective_batch_size: 8
+batch_size: 4
+effective_batch_size: 4
 num_workers: 16
 prefetch_factor: 2
 persistent_workers: true
 pin_memory: true
 patch_size: [80, 80, 80]
-notes: RTX 4090 Laptop throughput profile using additional VRAM and half of the 32 logical CPUs
+notes: Maximum study-valid microbatch with half of the 32 logical CPUs; the locked effective batch size is four
