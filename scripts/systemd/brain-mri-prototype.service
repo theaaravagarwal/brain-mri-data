@@ -1,7 +1,7 @@
 [Unit]
 Description=Brain MRI research prototype
 After=network-online.target brain-mri-ollama.service brain-mri-language-warm-eval.service
-Wants=network-online.target brain-mri-language-warm-eval.service
+Wants=network-online.target
 
 [Service]
 Type=simple
