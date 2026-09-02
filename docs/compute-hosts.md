@@ -9,13 +9,17 @@ non-identifying aggregate artifacts only.
 - SSH: `software@100.64.0.7`
 - Repository: `/home/software/Documents/.aa/brain`
 - GPU: NVIDIA GeForce RTX 4090 Laptop GPU, 16 GB VRAM
-- Services: `brain-mri-prototype.service` and `brain-mri-ollama.service`
+- Service: `brain-mri-prototype.service`; `brain-mri-ollama.service` stays
+  disabled while CNN training owns the GPU and is enabled only for language work.
 - Role: application, fixed-checkpoint CNN inference, and metadata-only language
   explanation. The LLM never receives MRI bytes, paths, or identifiers.
 - Serving checkpoint changes require frozen evaluation evidence and human review.
+- `brain-mri-gpu-performance.service` re-enables Lenovo `Long_Life` charging at
+  boot. On AC, firmware maintains the battery in its 75–80% conservation band.
 
-The application binds to `100.64.0.7:4173`. The stable user entrypoint remains
-`http://100.64.0.1:4173` through the fixed Tailscale proxy.
+There is one application instance, bound to `100.64.0.7:4173`. The stable user
+entrypoint remains `http://100.64.0.1:4173`; `.1` only reverse-proxies requests
+to `.7` and does not run a second prototype.
 
 ## RTX 4060 CNN worker
 
@@ -34,7 +38,8 @@ training or proxy files there.
 - SSH: `theaa@100.64.0.3`
 - Repository: `/home/theaa/Documents/brain-mri-data`
 - GPU: NVIDIA GeForce RTX 3060, 12 GB VRAM
-- Role: independent BraTS, pooled, and PAMC training/evaluation
+- Role: lighter independent BraTS, pooled, and PAMC training/evaluation; heavy
+  experimental queues stay on `.1` and `.7`.
 - Queue: `brain-mri-cnn-3060-queue.service`
 
 The worker may not have `nvidia-smi` on its interactive shell `PATH`; the

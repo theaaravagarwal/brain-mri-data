@@ -5,9 +5,10 @@ expected_gpu_name_contains: RTX 3060
 mixed_precision: fp16
 batch_size: 4
 effective_batch_size: 4
-num_workers: 8
+num_workers: 4
+validation_num_workers: 1
 prefetch_factor: 2
 persistent_workers: true
 pin_memory: true
 patch_size: [80, 80, 80]
-notes: Measured RTX 3060 chunk-cache winner; batch 4 leaves about 5.6 GiB VRAM headroom and validation remains batch 1
+notes: Lighter RTX 3060 profile with four training workers and one temporary validation worker; batch 4 leaves about 5.6 GiB VRAM headroom

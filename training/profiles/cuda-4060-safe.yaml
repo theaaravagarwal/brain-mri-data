@@ -6,6 +6,7 @@ mixed_precision: fp16
 batch_size: 1
 effective_batch_size: 4
 num_workers: 2
+validation_num_workers: 1
 prefetch_factor: 2
 persistent_workers: true
 pin_memory: false
