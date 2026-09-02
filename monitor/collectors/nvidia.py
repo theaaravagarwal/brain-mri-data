@@ -13,7 +13,7 @@ REPO = Path.home() / "Documents" / ".aarav" / "brain"
 RUNS = REPO / "runs"
 QUEUES = (
     ("prototype-cnn-rtx4060-long", "brain-mri-cnn-4060-queue.service", ("brats:20260902", "brats:20260903", "brats:20260904")),
-    ("prototype-cnn-rtx4060-continuation", "brain-mri-cnn-4060-continuation.service", tuple(f"brats:{seed}" for seed in range(20260904, 20260910))),
+    ("prototype-cnn-rtx4060-throughput", "brain-mri-cnn-4060-continuation.service", tuple(f"brats:{seed}" for seed in range(20260904, 20260910))),
 )
 
 
