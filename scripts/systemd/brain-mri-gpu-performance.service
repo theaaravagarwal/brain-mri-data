@@ -4,8 +4,9 @@ After=multi-user.target
 
 [Service]
 Type=oneshot
+ExecStart=/bin/sh -c 'printf max-power > /sys/firmware/acpi/platform_profile'
 ExecStart=/usr/bin/nvidia-smi -pm 1
-ExecStart=/usr/bin/nvidia-smi -pl 150
+ExecStart=/usr/bin/nvidia-smi -pl 175
 RemainAfterExit=yes
 
 [Install]
