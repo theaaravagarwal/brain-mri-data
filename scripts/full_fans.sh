@@ -20,4 +20,4 @@ sudo systemd-run --unit="${unit%.service}" --collect \
   "$script" --worker
 sleep 1
 sudo systemctl is-active --quiet "$unit"
-echo "Forced high-fan mode is active. Run ~/auto-fans.sh to restore automatic control."
+echo "Forced high-fan mode is active. Run ~/settings/auto-fans.sh to restore automatic control."
