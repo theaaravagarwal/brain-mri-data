@@ -34,6 +34,5 @@ if ! busctl --system status nvidia.powerd.server >/dev/null 2>&1; then
 fi
 printf 'Platform profile: %s\n' "$(powerprofilesctl get)"
 printf 'Battery charge mode: %s\n' "$(cat /sys/class/power_supply/BAT0/charge_types)"
-printf 'Fan mode: %s (efficient thermal dissipation)\n' "$(cat /sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/fan_mode)"
 printf 'Dynamic Boost: active (D-Bus ownership verified)\n'
 nvidia-smi -q -d POWER | grep -E "Average Power Draw|Current Power Limit|Max Power Limit" | head -3

@@ -6,7 +6,6 @@ After=multi-user.target
 Type=oneshot
 ExecStart=/bin/sh -c 'printf max-power > /sys/firmware/acpi/platform_profile'
 ExecStart=/bin/sh -c 'printf Long_Life > /sys/class/power_supply/BAT0/charge_types'
-ExecStart=/bin/sh -c 'printf 4 > /sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/fan_mode'
 ExecStart=/usr/bin/nvidia-smi -pm 1
 RemainAfterExit=yes
 
