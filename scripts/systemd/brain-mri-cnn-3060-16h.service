@@ -1,0 +1,15 @@
+[Unit]
+Description=Finite 16-hour RTX 3060 BraTS research queue
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documents/brain-mri-data
+ExecStart=%h/Documents/brain-mri-data/scripts/run_durable_cuda_queue.sh prototype-cnn-rtx3060-16h data/manifests/glioma.pilot.full.v3.batch4.json training/profiles/cuda-batch4.yaml 100 brats:20260904 brats:20260905 brats:20260906 brats:20260907 brats:20260908
+RuntimeMaxSec=16h
+Nice=10
+UMask=0077
+
+[Install]
+WantedBy=default.target
