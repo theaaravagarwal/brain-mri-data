@@ -149,6 +149,12 @@ export function createStudyService(options = {}) {
   const runner = options.runner || join(repoRoot, "scripts", "run_4060_research_inference.py");
   const checkpoint = options.checkpoint || join(repoRoot, "runs", "glioma-pilot--cuda-4060--brats--20260828--e100", "best.pt");
   const expectedCheckpointSha256 = options.expectedCheckpointSha256 || EXPECTED_CHECKPOINT_SHA256;
+  const deviceProbe = options.deviceProbe || (async () => {
+    const result = await runJsonProcess(python, ["-c", "import json, torch; print(json.dumps({'cuda': torch.cuda.is_available()}))"], {
+      cwd: repoRoot, timeoutMs: 15_000, spawnImpl: options.spawnImpl
+    });
+    return result.cuda === true;
+  });
   const bindHost = options.bindHost || process.env.MONITOR_BIND_HOST || "127.0.0.1";
   const publicHosts = options.publicHosts ? new Set(options.publicHosts) : configuredPublicHosts(bindHost);
   const jobs = new Map();
@@ -165,6 +171,7 @@ export function createStudyService(options = {}) {
       await access(runner);
       observedCheckpointSha256 = await fileSha256(checkpoint);
       checkpointStatus = observedCheckpointSha256 === expectedCheckpointSha256 ? "ready" : "digest_mismatch";
+      if (checkpointStatus === "ready" && !await deviceProbe()) checkpointStatus = "unavailable";
     } catch { checkpointStatus = "unavailable"; }
     capabilities = {
       schemaVersion: "research-study-capabilities/v1",

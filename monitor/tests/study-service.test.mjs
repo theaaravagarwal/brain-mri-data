@@ -90,7 +90,7 @@ function fakeSpawn() {
   };
 }
 
-async function fixture({ bindHost, publicHosts } = {}) {
+async function fixture({ bindHost, publicHosts, deviceProbe = async () => true } = {}) {
   const root = await mkdtemp(join(tmpdir(), "brain-study-service-"));
   const repoRoot = join(root, "repo");
   const runtimeRoot = join(root, "runtime");
@@ -104,7 +104,7 @@ async function fixture({ bindHost, publicHosts } = {}) {
   await writeFile(runner, "runner");
   await writeFile(checkpoint, "checkpoint");
   const expectedCheckpointSha256 = createHash("sha256").update("checkpoint").digest("hex");
-  const service = createStudyService({ repoRoot, runtimeRoot, python, runner, checkpoint, expectedCheckpointSha256, spawnImpl: fakeSpawn(), bindHost, publicHosts });
+  const service = createStudyService({ repoRoot, runtimeRoot, python, runner, checkpoint, expectedCheckpointSha256, spawnImpl: fakeSpawn(), deviceProbe, bindHost, publicHosts });
   await service.initialize();
   return { root, runtimeRoot, checkpoint, service };
 }
@@ -117,6 +117,13 @@ test("capabilities expose the exact ready checkpoint without a path", async () =
   assert.equal(value.inference.status, "ready");
   assert.equal(value.inference.checkpointSha256, service.constants.EXPECTED_CHECKPOINT_SHA256);
   assert.equal(JSON.stringify(value).includes("/runs/"), false);
+});
+
+test("capabilities fail closed when CUDA is unavailable", async () => {
+  const { service } = await fixture({ deviceProbe: async () => false });
+  const response = await call(service, "GET", "/api/capabilities");
+  assert.equal(response.status, 200);
+  assert.equal(response.json().inference.status, "unavailable");
 });
 
 test("cross-origin study uploads are rejected", async () => {

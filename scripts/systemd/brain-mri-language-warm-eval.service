@@ -1,0 +1,16 @@
+[Unit]
+Description=Warm and evaluate Brain MRI metadata-only language models
+After=brain-mri-ollama.service
+Requires=brain-mri-ollama.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/Documents/.aa/brain
+Environment=PATH=%h/Documents/.aa/brain/.tools/ollama/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=-%h/Documents/.aa/brain/.runtime/deployment.env
+ExecStart=%h/Documents/.aa/brain/scripts/run_language_boot_eval.sh
+UMask=0077
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

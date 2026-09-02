@@ -11,8 +11,10 @@ from pathlib import Path
 
 REPO = Path.home() / "Documents" / ".aarav" / "brain"
 RUNS = REPO / "runs"
-QUEUE_STATUS = RUNS / "queue-logs" / "prototype-cnn-rtx4060-long.status.json"
-QUEUE_UNIT = "brain-mri-cnn-4060-queue.service"
+QUEUES = (
+    ("prototype-cnn-rtx4060-long", "brain-mri-cnn-4060-queue.service", ("brats:20260902", "brats:20260903", "brats:20260904")),
+    ("prototype-cnn-rtx4060-continuation", "brain-mri-cnn-4060-continuation.service", tuple(f"brats:{seed}" for seed in range(20260904, 20260910))),
+)
 
 
 def command(args, timeout=4):
@@ -243,27 +245,32 @@ def sessions():
 
 
 def queue_snapshot():
-    value = read_json(QUEUE_STATUS)
-    service = command(["systemctl", "--user", "is-active", QUEUE_UNIT]).stdout.strip() or "unknown"
-    valid = (
-        value.get("schemaVersion") == "research-training-queue/v1"
-        and value.get("state") in {"waiting", "running", "complete", "attention"}
-        and isinstance(value.get("queuedRuns"), list)
-        and all(isinstance(run, str) for run in value["queuedRuns"])
-        and all(isinstance(value.get(key), int) for key in ("completedCount", "totalCount", "failedCount"))
-    )
-    if not valid:
-        return {
-            "state": "attention", "detail": "Queue status unavailable", "serviceState": service,
-            "currentRun": None, "queuedRuns": [], "completedCount": 0, "totalCount": 0,
-            "failedCount": 0, "updatedAt": None, "lastError": "status_unavailable",
-        }
-    current = value.get("currentRun")
-    queued = value["queuedRuns"]
+    snapshots, services = [], []
+    for queue_id, unit, jobs in QUEUES:
+        value = read_json(RUNS / "queue-logs" / f"{queue_id}.status.json")
+        service = command(["systemctl", "--user", "is-active", unit]).stdout.strip() or "unknown"
+        services.append(service)
+        valid = value.get("schemaVersion") == "research-training-queue/v1" and value.get("state") in {"waiting", "running", "complete", "attention"} and isinstance(value.get("queuedRuns"), list) and all(isinstance(run, str) for run in value["queuedRuns"]) and all(isinstance(value.get(key), int) for key in ("completedCount", "totalCount", "failedCount"))
+        snapshots.append(value if valid else {
+            "state": "waiting", "currentRun": None,
+            "queuedRuns": [f"{queue_id}--{arm}--{seed}--e100" for arm, seed in (job.split(":") for job in jobs)],
+            "completedCount": 0, "totalCount": len(jobs), "failedCount": 0,
+            "updatedAt": None, "lastError": None,
+        })
+    current = next((value.get("currentRun") for value in snapshots if value.get("currentRun")), None)
+    queued = [run for value in snapshots for run in value["queuedRuns"]]
+    states = {value["state"] for value in snapshots}
+    state = "running" if "running" in states else "waiting" if "waiting" in states else "attention" if "attention" in states else "complete"
+    completed = sum(value["completedCount"] for value in snapshots)
+    total = sum(value["totalCount"] for value in snapshots)
     return {
-        **value,
-        "serviceState": service,
-        "detail": current or f"{len(queued)} queued · {value['completedCount']}/{value['totalCount']} complete",
+        "schemaVersion": "research-training-queue/v1", "state": state,
+        "serviceState": "/".join(services), "currentRun": current, "queuedRuns": queued,
+        "completedCount": completed, "totalCount": total,
+        "failedCount": sum(value["failedCount"] for value in snapshots),
+        "updatedAt": max((value.get("updatedAt") for value in snapshots if value.get("updatedAt")), default=None),
+        "lastError": next((value.get("lastError") for value in snapshots if value.get("lastError")), None),
+        "detail": current or f"{len(queued)} queued · {completed}/{total} complete",
     }
 
 

@@ -186,7 +186,8 @@ function QueueSection({ snapshot }: { snapshot: DashboardSnapshot }) {
         <span className={`queue-state queue-state--${host.data!.queue.state}`}>{host.data!.queue.state}</span>
         <div className="session-list">
           <span>{host.data!.queue.serviceState} service · {host.data!.queue.completedCount}/{host.data!.queue.totalCount} complete{host.data!.queue.failedCount ? ` · ${host.data!.queue.failedCount} failed` : ""}</span>
-          {host.data!.queue.currentRun ? <code>{host.data!.queue.currentRun}</code> : host.data!.queue.queuedRuns.map(run => <code key={run}>{run}</code>)}
+          {host.data!.queue.currentRun ? <code>{host.data!.queue.currentRun}</code> : null}
+          {host.data!.queue.queuedRuns.map(run => <code key={run}>{run}</code>)}
         </div>
       </div>)}
     </div>
