@@ -1,0 +1,16 @@
+[Unit]
+Description=Verify the complete RTX 4090 MRI training cohort
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documents/.aa/brain
+ExecStart=%h/Documents/.aa/brain/scripts/run_4090_transfer_gate.sh
+Restart=on-failure
+RestartSec=30
+Nice=15
+UMask=0077
+
+[Install]
+WantedBy=default.target
