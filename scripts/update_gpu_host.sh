@@ -48,7 +48,10 @@ sudo env DEBIAN_FRONTEND=noninteractive apt-get -y \
   -o Dpkg::Options::=--force-confold full-upgrade
 sudo env DEBIAN_FRONTEND=noninteractive apt-get -y install \
   --install-recommends linux-generic-hwe-24.04 linux-headers-generic-hwe-24.04 ubuntu-drivers-common
-if command -v snap >/dev/null; then sudo snap refresh; fi
+if command -v snap >/dev/null; then
+  sudo systemctl start snapd.socket
+  sudo snap refresh
+fi
 
 echo "Installing Ubuntu's recommended NVIDIA driver and signed kernel modules..."
 ubuntu-drivers devices
