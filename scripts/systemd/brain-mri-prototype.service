@@ -15,8 +15,6 @@ Environment=MONITOR_AMD_TARGET=theaa@100.64.0.3
 Environment=MONITOR_SSH_IDENTITY=/home/software/.ssh/brain_mri_monitor_ed25519
 Environment=MONITOR_SSH_TIMEOUT_MS=15000
 Environment="BRAIN_MRI_INFERENCE_DEVICE=NVIDIA GeForce RTX 4090 Laptop GPU"
-Environment=BRAIN_MRI_LLM_MODEL=qwen3:0.6b
-Environment=BRAIN_MRI_OLLAMA_HOST=http://127.0.0.1:11434
 ExecStart=%h/Documents/.aa/brain/.tools/node/bin/node server.mjs
 Restart=on-failure
 RestartSec=3

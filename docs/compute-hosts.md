@@ -16,6 +16,11 @@ non-identifying aggregate artifacts only.
 - Serving checkpoint changes require frozen evaluation evidence and human review.
 - `brain-mri-gpu-performance.service` re-enables Lenovo `Long_Life` charging at
   boot. On AC, firmware maintains the battery in its 75–80% conservation band.
+- Keep one heavy training queue active on `.7`; the second queue stays disabled
+  so fixed-checkpoint inference has VRAM headroom and the host avoids OOM churn.
+- `postprocess_4090_generation.sh` waits for seeds 20260907–20260909 and then
+  writes a three-seed internal summary plus failure analysis; it never promotes
+  a checkpoint.
 
 There is one application instance, bound to `100.64.0.7:4173`. The stable user
 entrypoint remains `http://100.64.0.1:4173`; `.1` only reverse-proxies requests
