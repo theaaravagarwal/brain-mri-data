@@ -150,7 +150,7 @@ sources:
   brats2023_ssa_hf:
     provider: huggingface
     locator: Angelou0516/brats2023-ssa
-    revision: main
+    revision: 76608935145af0fb74a74b68f041471aa494f0f6
     format: nifti_3d
     tumor_scope: glioma
     modalities: [t1, t1ce, t2, flair]
@@ -163,9 +163,14 @@ sources:
     label_ontology: brats_africa_2023
     label_schema: brats_africa_123
     label_mapping:
-      status: pending_review
+      status: approved
+      whole_lesion:
+        positive_values: [1, 2, 3]
     potential_cohort_overlap_groups: [brats_africa]
-    notes: Public BraTS-Africa NIfTI mirror; retain as a domain-shift cohort and do not mix into validation without a predeclared split.
+    notes: >-
+      Immutable public mirror of the 60-case labeled BraTS 2023 SSA challenge
+      training cohort (759 MB), not the full 146-subject TCIA collection. Use
+      only as one locked domain-shift cohort and record the mirror limitation.
   pituitary_2d_kaggle:
     provider: kaggle
     locator: rm1000/brain-tumor-mri-scans
