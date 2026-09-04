@@ -190,6 +190,7 @@ export type StudyJob = {
   createdAt: string;
   updatedAt: string;
   expiresAt: string;
+  evaluationSampleScope?: "development_validation" | "external_public" | null;
   validation: StudyValidation | null;
   result: null | {
     schema_version: "research-segmentation-result/v1";

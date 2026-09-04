@@ -66,6 +66,11 @@ def main() -> None:
     fetch = sub.add_parser("fetch")
     fetch.add_argument("source_id")
     fetch.add_argument("--dry-run", action="store_true")
+    fetch.add_argument(
+        "--resume",
+        action="store_true",
+        help="resume an interrupted Hugging Face download",
+    )
     fetch_auto = sub.add_parser(
         "fetch-auto", help="sequentially fetch Kaggle and Hugging Face sources only"
     )
@@ -404,7 +409,11 @@ def main() -> None:
         return
     source = get_source(args.source_id, catalog)
     if args.command == "fetch":
-        print(fetch_source(args.source_id, source, raw_root, args.dry_run))
+        print(
+            fetch_source(
+                args.source_id, source, raw_root, args.dry_run, resume=args.resume
+            )
+        )
         return
     if args.command == "discover":
         print(

@@ -12,6 +12,13 @@ const defaultRepoRoot = resolve(here, "..");
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const EXPECTED_CHECKPOINT_SHA256 = "121422a861bbe7affaa5e161058e69eea737b2390651c3c03ea20256969e99e5";
 const MODALITIES = Object.freeze({ t1: "0000", t1ce: "0001", t2: "0002", flair: "0003" });
+const DEMO_MODALITY_SUFFIXES = Object.freeze({
+  t1: ["_t1", "-t1n"],
+  t1ce: ["_t1ce", "-t1c"],
+  t2: ["_t2", "-t2w"],
+  flair: ["_flair", "-t2f"]
+});
+const EVALUATION_DEMO_SCOPES = new Set(["development_validation", "external_public"]);
 const MAX_FILE_BYTES = 512 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 2 * 1024 * 1024 * 1024;
 const RETENTION_MS = 24 * 60 * 60 * 1000;
@@ -34,7 +41,8 @@ function publicJob(job) {
     result: job.result ?? null,
     explanation: job.explanation ?? null,
     error: job.error ?? null,
-    artifacts: job.state === "succeeded" ? Object.keys(ARTIFACTS) : []
+    artifacts: job.state === "succeeded" ? Object.keys(ARTIFACTS) : [],
+    evaluationSampleScope: job.evaluationSampleScope ?? null
   };
 }
 
@@ -151,6 +159,8 @@ export function createStudyService(options = {}) {
   const expectedCheckpointSha256 = options.expectedCheckpointSha256 || EXPECTED_CHECKPOINT_SHA256;
   const demoDirectory = options.demoDirectory || process.env.BRAIN_MRI_DEMO_DIR || null;
   const evaluationDemoDirectory = options.evaluationDemoDirectory || process.env.BRAIN_MRI_EVALUATION_DEMO_DIR || null;
+  const evaluationDemoScope = options.evaluationDemoScope || process.env.BRAIN_MRI_EVALUATION_DEMO_SCOPE || "development_validation";
+  if (!EVALUATION_DEMO_SCOPES.has(evaluationDemoScope)) throw new Error("Invalid evaluation demo scope");
   const deviceProbe = options.deviceProbe || (async () => {
     const result = await runJsonProcess(python, ["-c", "import json, torch; print(json.dumps({'cuda': torch.cuda.is_available()}))"], {
       cwd: repoRoot, timeoutMs: 15_000, spawnImpl: options.spawnImpl
@@ -359,12 +369,13 @@ export function createStudyService(options = {}) {
     if (!sourceDirectory) return sendJson(res, 404, { error: "demo_unavailable" });
     const entries = await readdir(sourceDirectory, { withFileTypes: true });
     const sources = Object.keys(MODALITIES).map(modality => {
-      const matches = entries.filter(entry => entry.isFile() && new RegExp(`_${modality}\\.nii(?:\\.gz)?$`, "i").test(entry.name));
+      const suffixes = DEMO_MODALITY_SUFFIXES[modality];
+      const matches = entries.filter(entry => entry.isFile() && suffixes.some(suffix => entry.name.toLowerCase().endsWith(`${suffix}.nii`) || entry.name.toLowerCase().endsWith(`${suffix}.nii.gz`)));
       if (matches.length !== 1) throw new Error(`Demo ${modality} volume is unavailable`);
       return [modality, join(sourceDirectory, matches[0].name)];
     });
     const reference = evaluation
-      ? entries.find(entry => entry.isFile() && /_seg\.nii(?:\.gz)?$/i.test(entry.name))
+      ? entries.find(entry => entry.isFile() && /(?:_|-)seg\.nii(?:\.gz)?$/i.test(entry.name))
       : null;
     if (evaluation && !reference) throw new Error("Accuracy sample reference outline is unavailable");
     const jobId = randomUUID();
@@ -373,7 +384,8 @@ export function createStudyService(options = {}) {
     await mkdir(inputDirectory, { recursive: true, mode: 0o700 });
     try {
       for (const [modality, source] of sources) {
-        const destination = join(inputDirectory, `research_input_${MODALITIES[modality]}.nii`);
+        const extension = source.toLowerCase().endsWith(".nii.gz") ? ".nii.gz" : ".nii";
+        const destination = join(inputDirectory, `research_input_${MODALITIES[modality]}${extension}`);
         await copyFile(source, destination);
         await chmod(destination, 0o600);
       }
@@ -393,7 +405,8 @@ export function createStudyService(options = {}) {
       const job = {
         jobId, state: "validated", createdAt: now.toISOString(), updatedAt: now.toISOString(),
         expiresAt: new Date(now.getTime() + RETENTION_MS).toISOString(), directory, validation,
-        uploadMetadata: {}, result: null, explanation: null, error: null
+        uploadMetadata: {}, evaluationSampleScope: evaluation ? evaluationDemoScope : null,
+        result: null, explanation: null, error: null
       };
       jobs.set(jobId, job);
       await persist(job);

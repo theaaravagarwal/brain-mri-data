@@ -107,17 +107,21 @@ async function fixture({ bindHost, publicHosts, deviceProbe = async () => true }
   const runner = join(repoRoot, "scripts", "runner.py");
   const checkpoint = join(repoRoot, "runs", "best.pt");
   const demoDirectory = join(repoRoot, "demo");
+  const evaluationDemoDirectory = join(repoRoot, "external-demo");
   await mkdir(join(repoRoot, ".venv", "bin"), { recursive: true });
   await mkdir(join(repoRoot, "scripts"), { recursive: true });
   await mkdir(join(repoRoot, "runs"), { recursive: true });
   await mkdir(demoDirectory, { recursive: true });
+  await mkdir(evaluationDemoDirectory, { recursive: true });
   for (const modality of ["t1", "t1ce", "t2", "flair"]) await writeFile(join(demoDirectory, `sample_${modality}.nii`), modality);
   await writeFile(join(demoDirectory, "sample_seg.nii"), "reference");
+  for (const suffix of ["t1n", "t1c", "t2w", "t2f"]) await writeFile(join(evaluationDemoDirectory, `external-${suffix}.nii.gz`), suffix);
+  await writeFile(join(evaluationDemoDirectory, "external-seg.nii.gz"), "reference");
   await writeFile(python, "python");
   await writeFile(runner, "runner");
   await writeFile(checkpoint, "checkpoint");
   const expectedCheckpointSha256 = createHash("sha256").update("checkpoint").digest("hex");
-  const service = createStudyService({ repoRoot, runtimeRoot, python, runner, checkpoint, expectedCheckpointSha256, demoDirectory, evaluationDemoDirectory: demoDirectory, spawnImpl: fakeSpawn(), deviceProbe, bindHost, publicHosts });
+  const service = createStudyService({ repoRoot, runtimeRoot, python, runner, checkpoint, expectedCheckpointSha256, demoDirectory, evaluationDemoDirectory, evaluationDemoScope: "external_public", spawnImpl: fakeSpawn(), deviceProbe, bindHost, publicHosts });
   await service.initialize();
   return { root, runtimeRoot, checkpoint, service };
 }
@@ -156,8 +160,9 @@ test("built-in accuracy sample includes a private reference mask", async () => {
   assert.equal(response.status, 201, response.body.toString());
   const job = response.json();
   assert.equal(job.validation.reference_mask.nonzero_voxels, 10);
+  assert.equal(job.evaluationSampleScope, "external_public");
   assert.equal(JSON.stringify(job).includes("sample_seg"), false);
-  assert.ok((await readdir(join(runtimeRoot, job.jobId, "input"))).includes("research_reference.nii"));
+  assert.ok((await readdir(join(runtimeRoot, job.jobId, "input"))).includes("research_reference.nii.gz"));
 });
 
 test("capabilities fail closed when CUDA is unavailable", async () => {

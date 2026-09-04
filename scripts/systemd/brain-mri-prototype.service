@@ -18,7 +18,8 @@ Environment="BRAIN_MRI_INFERENCE_DEVICE=NVIDIA GeForce RTX 4090 Laptop GPU"
 Environment=BRAIN_MRI_LLM_MODEL=qwen3:4b
 Environment=BRAIN_MRI_OLLAMA_HOST=http://127.0.0.1:11434
 Environment=BRAIN_MRI_DEMO_DIR=%h/Documents/.aa/brain/data/raw/brats2020_kaggle/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData/BraTS20_Training_341
-Environment=BRAIN_MRI_EVALUATION_DEMO_DIR=%h/Documents/.aa/brain/data/raw/brats2020_kaggle/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData/BraTS20_Training_019
+Environment=BRAIN_MRI_EVALUATION_DEMO_DIR=%h/Documents/.aa/brain/data/raw/brats2023_ssa_hf/ASNR-MICCAI-BraTS2023-SSA-Challenge-TrainingData_V2/BraTS-SSA-00141-000
+Environment=BRAIN_MRI_EVALUATION_DEMO_SCOPE=external_public
 ExecStart=%h/Documents/.aa/brain/.tools/node/bin/node server.mjs
 Restart=on-failure
 RestartSec=3
