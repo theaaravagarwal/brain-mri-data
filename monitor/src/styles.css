@@ -171,6 +171,15 @@ th:last-child, td:last-child { padding-right: 0; }
 .inline-recheck:disabled { opacity: 0.58; cursor: wait; }
 
 .study-workspace { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.65fr); gap: 36px; padding: 24px 0; border-bottom: 1px solid var(--rule-strong); }
+.external-benchmark { display: grid; grid-template-columns: minmax(240px, .8fr) minmax(0, 1.2fr); gap: 32px; align-items: end; padding: 28px 0; border-bottom: 1px solid var(--rule-strong); }
+.external-benchmark h2 { margin: 5px 0 6px; font-size: clamp(1.2rem, 2vw, 1.65rem); }
+.external-benchmark p { margin: 0; color: var(--muted); max-width: 58ch; }
+.external-benchmark dl { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; }
+.external-benchmark dl > div { padding: 4px 18px; border-left: 1px solid var(--rule-strong); }
+.external-benchmark dt, .external-benchmark small { color: var(--muted); font-size: .76rem; }
+.external-benchmark dd { margin: 4px 0; font-size: 1.45rem; font-weight: 700; }
+.external-benchmark small { display: block; line-height: 1.35; }
+.external-benchmark progress { width: 100%; }
 .modality-form, .validation-ledger { min-width: 0; }
 .file-total { color: var(--muted); font-size: 0.72rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .modality-list { border-top: 1px solid var(--rule-strong); }
@@ -258,7 +267,7 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding-top: 
   .host-band { grid-template-columns: 1fr 1.6fr; }
   .host-work { grid-column: 1 / -1; }
   .work-grid { grid-template-columns: 1fr; }
-  .study-workspace, .result-grid { grid-template-columns: 1fr; gap: 28px; }
+  .study-workspace, .result-grid, .external-benchmark { grid-template-columns: 1fr; gap: 28px; }
   .model-readiness { max-width: 520px; }
   .validation-ledger { padding-left: 0; border-left: 0; }
 }
@@ -323,6 +332,8 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding-top: 
   .study-steps strong { font-size: 0.68rem; }
   .study-steps small { display: none; }
   .study-workspace { gap: 20px; padding: 20px 0; }
+  .external-benchmark dl { grid-template-columns: 1fr; }
+  .external-benchmark dl > div { border-left: 0; border-top: 1px solid var(--rule-strong); padding: 12px 0; }
   .study-workspace .section-heading { margin-bottom: 12px; }
   .study-workspace .section-heading p { display: none; }
   .study-alert { gap: 8px; }

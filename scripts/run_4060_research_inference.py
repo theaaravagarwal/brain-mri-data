@@ -9,6 +9,8 @@ It never sends image data or paths to the optional language model.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import fcntl
 import hashlib
 import json
 import os
@@ -41,6 +43,7 @@ TRAINER_SHA256 = "bf5dede3b5b1ee5d916cd6f046ca7eda8ea579f0f730db6f9201e2523b0456
 MAX_AXIS = 512
 MAX_VOXELS = 64_000_000
 REFERENCE_NAMES = ("research_reference.nii.gz", "research_reference.nii")
+GPU_LOCK_PATH = Path(os.environ.get("BRAIN_MRI_GPU_LOCK", "/tmp/brain-mri-gpu-0.lock"))
 
 
 def arguments() -> argparse.Namespace:
@@ -81,6 +84,18 @@ def write_json_once(path: Path, value: Any) -> None:
         stream.write(data)
         stream.flush()
         os.fsync(stream.fileno())
+
+
+@contextlib.contextmanager
+def gpu_lock():
+    """Serialize memory-heavy inference across the web app and batch evaluator."""
+    descriptor = os.open(GPU_LOCK_PATH, os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+        os.close(descriptor)
 
 
 def input_paths(directory: Path) -> list[Path]:
@@ -262,27 +277,28 @@ def run_inference(args: argparse.Namespace) -> dict[str, Any]:
     if UUID(job_id).version != 4:
         raise ValueError("job-id must be a UUIDv4")
     device = torch.device("cuda:0")
-    model = PamcSegResNet(init_filters=32, source_count=1).to(device)
-    state = torch.load(checkpoint, map_location=device, weights_only=True)
-    model.load_state_dict(state["model"])
-    model.eval()
-    with torch.inference_mode(), torch.amp.autocast("cuda", dtype=torch.float16):
-        tensor = torch.from_numpy(image).unsqueeze(0).to(device)
-        logits = sliding_window_inference(
-            tensor,
-            tuple(args.patch_size),
-            1,
-            lambda values: model(values)[0],
-            overlap=0.5,
-        )
-        segmentation = (
-            (torch.sigmoid(logits) >= 0.5)
-            .to(torch.uint8)
-            .squeeze(0)
-            .squeeze(0)
-            .cpu()
-            .numpy()
-        )
+    with gpu_lock():
+        model = PamcSegResNet(init_filters=32, source_count=1).to(device)
+        state = torch.load(checkpoint, map_location=device, weights_only=True)
+        model.load_state_dict(state["model"])
+        model.eval()
+        with torch.inference_mode(), torch.amp.autocast("cuda", dtype=torch.float16):
+            tensor = torch.from_numpy(image).unsqueeze(0).to(device)
+            logits = sliding_window_inference(
+                tensor,
+                tuple(args.patch_size),
+                1,
+                lambda values: model(values)[0],
+                overlap=0.5,
+            )
+            segmentation = (
+                (torch.sigmoid(logits) >= 0.5)
+                .to(torch.uint8)
+                .squeeze(0)
+                .squeeze(0)
+                .cpu()
+                .numpy()
+            )
 
     if tuple(segmentation.shape) != tuple(reference.shape) or not set(np.unique(segmentation)).issubset({0, 1}):
         raise RuntimeError("Inference produced an invalid segmentation contract")

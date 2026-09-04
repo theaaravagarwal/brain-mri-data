@@ -1,0 +1,122 @@
+{
+  "benchmark_id": "fixed-segresnet-brats-ssa-20260904",
+  "case_count": 60,
+  "expected_case_count": 60,
+  "failures": {
+    "case_error_count": 0,
+    "empty_prediction_count": 1,
+    "hd95_unavailable_count": 1
+  },
+  "latency_seconds": {
+    "max": 4.5123889760288876,
+    "mean": 4.195682041699183,
+    "median": 4.204677069981699,
+    "min": 3.4141491869813763,
+    "n": 60,
+    "p05": 4.088537069954327,
+    "p25": 4.153731429985783,
+    "p75": 4.24945260475215,
+    "p95": 4.290565195301315,
+    "std": 0.1255075672806876
+  },
+  "limitations": [
+    "Research evaluation only; not clinical evidence or medical advice.",
+    "Confidence intervals describe case sampling in this 60-case cohort and do not quantify site or population shift.",
+    "This external cohort was not used for retraining, threshold tuning, or checkpoint selection."
+  ],
+  "metrics": {
+    "hd95_mm": {
+      "max": 73.59619535317943,
+      "mean": 12.589913116630894,
+      "mean_ci95": [
+        8.56226465195218,
+        17.24278659815509
+      ],
+      "median": 4.47213595499958,
+      "min": 1.4142135623730951,
+      "n": 59,
+      "p05": 1.9414213562373097,
+      "p25": 2.449489742783178,
+      "p75": 12.545327171229413,
+      "p95": 51.34001076195064,
+      "std": 17.22077677887297
+    },
+    "precision": {
+      "max": 0.9883287991754951,
+      "mean": 0.8868166350391701,
+      "mean_ci95": [
+        0.841034502584761,
+        0.9235324807916221
+      ],
+      "median": 0.9516768666904765,
+      "min": 0.0,
+      "n": 60,
+      "p05": 0.6570249748300603,
+      "p25": 0.8841308699740569,
+      "p75": 0.9672245730286035,
+      "p95": 0.9867959172335606,
+      "std": 0.1646284858205049
+    },
+    "recall": {
+      "max": 0.9764183446902993,
+      "mean": 0.8794325309748018,
+      "mean_ci95": [
+        0.8395610729552793,
+        0.9091297910906792
+      ],
+      "median": 0.9268928388016918,
+      "min": 0.0,
+      "n": 60,
+      "p05": 0.6907751881251193,
+      "p25": 0.8532693160165584,
+      "p75": 0.9495816536649528,
+      "p95": 0.9677178146823979,
+      "std": 0.14014961160770736
+    },
+    "whole_lesion_dice": {
+      "max": 0.9707133054348046,
+      "mean": 0.8778012350262192,
+      "mean_ci95": [
+        0.8379915658196134,
+        0.9087723110341394
+      ],
+      "median": 0.9233596008738295,
+      "min": 0.0,
+      "n": 60,
+      "p05": 0.7024165826885673,
+      "p25": 0.8607403804061726,
+      "p75": 0.9516531238583416,
+      "p95": 0.9653255929425758,
+      "std": 0.14420810541419682
+    },
+    "whole_lesion_iou": {
+      "max": 0.9430932222871743,
+      "mean": 0.8022846899121102,
+      "mean_ci95": [
+        0.7587818328174872,
+        0.8395192840679532
+      ],
+      "median": 0.8576313499963668,
+      "min": 0.0,
+      "n": 60,
+      "p05": 0.541326886322215,
+      "p25": 0.7555479370573152,
+      "p75": 0.9077655800773805,
+      "p95": 0.9329752420901298,
+      "std": 0.16343704713139606
+    }
+  },
+  "provenance": {
+    "checkpoint_sha256": "121422a861bbe7affaa5e161058e69eea737b2390651c3c03ea20256969e99e5",
+    "dataset_source_id": "brats2023_ssa_hf",
+    "dataset_source_revision": "76608935145af0fb74a74b68f041471aa494f0f6",
+    "generated_at": "2026-09-04T17:57:38.425822+00:00",
+    "model_id": "glioma-segresnet-20260828",
+    "plan_sha256": "5f8e5a9009ba81e71156dd2cc535d1446fe0d6aba8c09bb996fe59b01ce43d63"
+  },
+  "research_only": true,
+  "schema_version": "fixed-segresnet-external-summary/v1",
+  "scope": "fixed_model_external_research_evaluation",
+  "status": "complete",
+  "total_elapsed_seconds": 251.740922501951
+}

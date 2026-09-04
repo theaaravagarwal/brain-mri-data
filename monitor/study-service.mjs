@@ -160,6 +160,7 @@ export function createStudyService(options = {}) {
   const demoDirectory = options.demoDirectory || process.env.BRAIN_MRI_DEMO_DIR || null;
   const evaluationDemoDirectory = options.evaluationDemoDirectory || process.env.BRAIN_MRI_EVALUATION_DEMO_DIR || null;
   const evaluationDemoScope = options.evaluationDemoScope || process.env.BRAIN_MRI_EVALUATION_DEMO_SCOPE || "development_validation";
+  const benchmarkDirectory = options.benchmarkDirectory || process.env.BRAIN_MRI_EXTERNAL_BENCHMARK_DIR || join(repoRoot, "artifacts", "fixed-segresnet-external");
   if (!EVALUATION_DEMO_SCOPES.has(evaluationDemoScope)) throw new Error("Invalid evaluation demo scope");
   const deviceProbe = options.deviceProbe || (async () => {
     const result = await runJsonProcess(python, ["-c", "import json, torch; print(json.dumps({'cuda': torch.cuda.is_available()}))"], {
@@ -174,6 +175,22 @@ export function createStudyService(options = {}) {
   let activeJobId = null;
   let initialized = false;
   let capabilities = null;
+
+  async function readExternalBenchmark() {
+    for (const filename of ["summary.public.json", "status.public.json"]) {
+      try {
+        const value = JSON.parse(await readFile(join(benchmarkDirectory, filename), "utf8"));
+        if (!["fixed-segresnet-external-summary/v1", "fixed-segresnet-external-status/v1"].includes(value.schema_version)) continue;
+        if (!['running', 'complete'].includes(value.status)) continue;
+        const encoded = JSON.stringify(value);
+        if (/case_token|case_id|native_path|\/home\//i.test(encoded)) throw new Error("Benchmark public artifact contains private fields");
+        return value;
+      } catch (error) {
+        if (error?.code !== "ENOENT") console.error("External benchmark artifact rejected:", error.message);
+      }
+    }
+    return null;
+  }
 
   async function refreshCapabilities() {
     let checkpointStatus = "unavailable";
@@ -206,6 +223,7 @@ export function createStudyService(options = {}) {
       evaluationDemoAvailable: Boolean(evaluationDemoDirectory),
       limits: { files: 5, perFileBytes: MAX_FILE_BYTES, totalBytes: MAX_TOTAL_BYTES, retentionHours: 24 }
     };
+    capabilities.externalBenchmark = await readExternalBenchmark();
   }
 
   function getJob(jobId) {

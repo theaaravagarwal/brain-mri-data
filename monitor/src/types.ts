@@ -137,6 +137,24 @@ export type StudyCapabilities = {
   };
   demoAvailable: boolean;
   evaluationDemoAvailable: boolean;
+  externalBenchmark?: null | {
+    schema_version: "fixed-segresnet-external-status/v1" | "fixed-segresnet-external-summary/v1";
+    benchmark_id: string;
+    status: "running" | "complete";
+    completed_cases?: number;
+    total_cases?: number;
+    case_count?: number;
+    expected_case_count?: number;
+    metrics?: Record<string, {
+      n: number;
+      mean: number;
+      median: number;
+      mean_ci95: [number, number];
+    }>;
+    failures?: { empty_prediction_count: number; hd95_unavailable_count: number; case_error_count: number };
+    latency_seconds?: { median: number; p95: number };
+    provenance?: { model_id: string; checkpoint_sha256: string; generated_at: string };
+  };
   limits: { files: 5; perFileBytes: number; totalBytes: number; retentionHours: number };
 };
 

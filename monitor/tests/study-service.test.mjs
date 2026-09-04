@@ -108,11 +108,13 @@ async function fixture({ bindHost, publicHosts, deviceProbe = async () => true }
   const checkpoint = join(repoRoot, "runs", "best.pt");
   const demoDirectory = join(repoRoot, "demo");
   const evaluationDemoDirectory = join(repoRoot, "external-demo");
+  const benchmarkDirectory = join(repoRoot, "artifacts", "fixed-segresnet-external");
   await mkdir(join(repoRoot, ".venv", "bin"), { recursive: true });
   await mkdir(join(repoRoot, "scripts"), { recursive: true });
   await mkdir(join(repoRoot, "runs"), { recursive: true });
   await mkdir(demoDirectory, { recursive: true });
   await mkdir(evaluationDemoDirectory, { recursive: true });
+  await mkdir(benchmarkDirectory, { recursive: true });
   for (const modality of ["t1", "t1ce", "t2", "flair"]) await writeFile(join(demoDirectory, `sample_${modality}.nii`), modality);
   await writeFile(join(demoDirectory, "sample_seg.nii"), "reference");
   for (const suffix of ["t1n", "t1c", "t2w", "t2f"]) await writeFile(join(evaluationDemoDirectory, `external-${suffix}.nii.gz`), suffix);
@@ -121,9 +123,9 @@ async function fixture({ bindHost, publicHosts, deviceProbe = async () => true }
   await writeFile(runner, "runner");
   await writeFile(checkpoint, "checkpoint");
   const expectedCheckpointSha256 = createHash("sha256").update("checkpoint").digest("hex");
-  const service = createStudyService({ repoRoot, runtimeRoot, python, runner, checkpoint, expectedCheckpointSha256, demoDirectory, evaluationDemoDirectory, evaluationDemoScope: "external_public", spawnImpl: fakeSpawn(), deviceProbe, bindHost, publicHosts });
+  const service = createStudyService({ repoRoot, runtimeRoot, python, runner, checkpoint, expectedCheckpointSha256, demoDirectory, evaluationDemoDirectory, evaluationDemoScope: "external_public", benchmarkDirectory, spawnImpl: fakeSpawn(), deviceProbe, bindHost, publicHosts });
   await service.initialize();
-  return { root, runtimeRoot, checkpoint, service };
+  return { root, runtimeRoot, checkpoint, benchmarkDirectory, service };
 }
 
 test("capabilities expose the exact ready checkpoint without a path", async () => {
@@ -136,6 +138,21 @@ test("capabilities expose the exact ready checkpoint without a path", async () =
   assert.equal(value.demoAvailable, true);
   assert.equal(value.evaluationDemoAvailable, true);
   assert.equal(JSON.stringify(value).includes("/runs/"), false);
+});
+
+test("capabilities expose only aggregate external benchmark results", async () => {
+  const { service, benchmarkDirectory } = await fixture();
+  await writeFile(join(benchmarkDirectory, "summary.public.json"), JSON.stringify({
+    schema_version: "fixed-segresnet-external-summary/v1",
+    benchmark_id: "fixed-test",
+    status: "complete",
+    case_count: 60,
+    metrics: { whole_lesion_dice: { mean: 0.9, median: 0.91, mean_ci95: [0.88, 0.92] } }
+  }));
+  const response = await call(service, "GET", "/api/capabilities");
+  assert.equal(response.status, 200);
+  assert.equal(response.json().externalBenchmark.case_count, 60);
+  assert.equal(JSON.stringify(response.json()).includes("case_token"), false);
 });
 
 test("built-in demo creates a validated private study without an upload", async () => {

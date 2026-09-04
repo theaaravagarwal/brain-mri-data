@@ -142,6 +142,9 @@ export default function StudyView() {
   const llm = job?.explanation?.llm;
   const shownExplanation = llm?.status === "validated" && llm.artifact ? llm.artifact : job?.explanation?.deterministic;
   const evaluation = job?.result?.evaluation;
+  const benchmark = capabilities?.externalBenchmark;
+  const benchmarkDice = benchmark?.metrics?.whole_lesion_dice;
+  const benchmarkHd95 = benchmark?.metrics?.hd95_mm;
 
   return <div className="view study-view" id="view-study">
     <div className="study-intro">
@@ -162,6 +165,19 @@ export default function StudyView() {
       <li aria-current={job?.state === "running" ? "step" : undefined}><span>3</span><strong>Process</strong></li>
       <li aria-current={job?.state === "succeeded" ? "step" : undefined}><span>4</span><strong>Download</strong></li>
     </ol>
+
+    {benchmark ? <section className="external-benchmark" aria-labelledby="external-benchmark-title">
+      <div>
+        <span className="eyebrow">Separate public test set</span>
+        <h2 id="external-benchmark-title">{benchmark.status === "complete" ? `Tested on ${benchmark.case_count} unseen cases` : `Testing ${benchmark.completed_cases}/${benchmark.total_cases} cases`}</h2>
+        <p>{benchmark.status === "complete" ? "The fixed model was tested once on data kept out of training and tuning." : "The fixed model is running through the full outside dataset now."}</p>
+      </div>
+      {benchmark.status === "complete" && benchmarkDice && benchmarkHd95 ? <dl>
+        <div><dt>Average Dice</dt><dd>{benchmarkDice.mean.toFixed(3)}</dd><small>95% range for the mean: {benchmarkDice.mean_ci95[0].toFixed(3)}–{benchmarkDice.mean_ci95[1].toFixed(3)}</small></div>
+        <div><dt>Typical boundary error</dt><dd>{benchmarkHd95.median.toFixed(1)} mm</dd><small>HD95 median</small></div>
+        <div><dt>Empty results</dt><dd>{benchmark.failures?.empty_prediction_count ?? 0}</dd><small>out of {benchmark.case_count} cases</small></div>
+      </dl> : <progress max={benchmark.total_cases || 1} value={benchmark.completed_cases || 0} aria-label="Outside dataset test progress" />}
+    </section> : null}
 
     {error ? <div className="study-alert" role="alert"><strong>We couldn’t continue.</strong><span>{error}</span>{!capabilities ? <button className="inline-recheck" type="button" disabled={checkingCapabilities} onClick={() => { void checkCapabilities().request; }}>{checkingCapabilities ? "Checking…" : "Try connection again"}</button> : null}</div> : null}
     {!modelReady && capabilities ? <div className="study-alert" role="status"><strong>The model is not ready.</strong><span>Please try again in a moment.</span><button className="inline-recheck" type="button" disabled={checkingCapabilities} onClick={() => { void checkCapabilities().request; }}>{checkingCapabilities ? "Checking…" : "Check again"}</button></div> : null}

@@ -1,0 +1,39 @@
+{
+  "schema_version": "fixed-segresnet-external-benchmark-plan/v1",
+  "benchmark_id": "fixed-segresnet-brats-ssa-20260904",
+  "purpose": "Evaluate the fixed prototype serving model without retraining, threshold selection, or checkpoint selection.",
+  "model_id": "glioma-segresnet-20260828",
+  "checkpoint_sha256": "121422a861bbe7affaa5e161058e69eea737b2390651c3c03ea20256969e99e5",
+  "dataset": {
+    "source_id": "brats2023_ssa_hf",
+    "source_revision": "76608935145af0fb74a74b68f041471aa494f0f6",
+    "expected_cases": 60,
+    "modalities": ["t1n", "t1c", "t2w", "t2f"],
+    "reference_labels_included": [1, 2, 3]
+  },
+  "inference": {
+    "threshold": 0.5,
+    "patch_size": [80, 80, 80],
+    "overlap": 0.5,
+    "sw_batch_size": 1
+  },
+  "metrics": ["whole_lesion_dice", "whole_lesion_iou", "precision", "recall", "hd95_mm"],
+  "aggregation": {
+    "percentiles": [5, 25, 50, 75, 95],
+    "bootstrap_seed": 20260904,
+    "bootstrap_replicates": 10000,
+    "confidence_level": 0.95
+  },
+  "privacy": {
+    "public_output": "aggregate_only",
+    "native_case_ids_public": false,
+    "native_paths_recorded": false
+  },
+  "guardrails": {
+    "evaluation_only": true,
+    "prohibit_retraining_on_cohort": true,
+    "prohibit_threshold_tuning_on_cohort": true,
+    "prohibit_checkpoint_selection_on_cohort": true,
+    "research_only": true
+  }
+}
