@@ -142,6 +142,7 @@ export default function StudyView() {
   const llm = job?.explanation?.llm;
   const shownExplanation = llm?.status === "validated" && llm.artifact ? llm.artifact : job?.explanation?.deterministic;
   const evaluation = job?.result?.evaluation;
+  const emptyOutline = job?.result?.segmentation.nonzero_voxels === 0;
   const benchmark = capabilities?.externalBenchmark;
   const benchmarkDice = benchmark?.metrics?.whole_lesion_dice;
   const benchmarkHd95 = benchmark?.metrics?.hd95_mm;
@@ -225,8 +226,8 @@ export default function StudyView() {
       </aside>
     </div>
 
-    {job?.state === "succeeded" && job.result && shownExplanation ? <section className="study-result" aria-labelledby="result-title">
-      <div className="result-heading"><div><h2 id="result-title">{evaluation ? "Accuracy test ready" : "Research outline ready"}</h2><p role="note">For research only—not a medical result.</p></div><StatusMark state="complete" /></div>
+    {job?.state === "succeeded" && job.result && shownExplanation ? <section className={`study-result ${emptyOutline ? "study-result--empty" : ""}`} aria-labelledby="result-title">
+      <div className="result-heading"><div><h2 id="result-title">{emptyOutline ? "No outline produced" : evaluation ? "Accuracy test ready" : "Research outline ready"}</h2><p role="note">{emptyOutline ? "This does not mean the scan is clear—expert review is required." : "For research only—not a medical result."}</p></div><StatusMark state={emptyOutline ? "failed" : "complete"} label={emptyOutline ? "review" : "complete"} /></div>
       <div className="result-grid">
         <div className="result-summary">
           {evaluation ? <div className="evaluation-block">

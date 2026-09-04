@@ -126,6 +126,13 @@ class LanguageGatewayTests(unittest.TestCase):
         self.assertNotIn("spacing_mm", prompt)
         self.assertIn(json.dumps(explanation["limitations"]), prompt)
 
+    def test_empty_outline_never_implies_an_absent_lesion(self) -> None:
+        value = serving_result().model_dump(mode="json")
+        value["segmentation"]["nonzero_voxels"] = 0
+        explanation = deterministic_result_explanation(ResearchSegmentationResultV1.model_validate(value))
+        self.assertIn("empty outline", explanation["summary"])
+        self.assertIn("does not establish that no lesion is present", explanation["limitations"])
+
     def test_new_study_explanation_requires_exact_evidence(self) -> None:
         result = serving_result()
         explanation = deterministic_result_explanation(result)

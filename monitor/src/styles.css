@@ -236,6 +236,8 @@ th:last-child, td:last-child { padding-right: 0; }
 .ledger-failure span { color: var(--muted); }
 
 .study-result { padding: 42px 0 18px; }
+.study-result--empty .result-heading { border-color: var(--failure); }
+.study-result--empty .result-heading h2, .study-result--empty .result-heading p { color: var(--failure); }
 .result-heading { display: flex; align-items: start; justify-content: space-between; gap: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--rule-strong); }
 .result-heading h2 { margin: 0; font-size: 1.65rem; letter-spacing: -0.025em; }
 .result-heading p { margin: 8px 0 0; color: var(--warning); font-size: 0.78rem; }

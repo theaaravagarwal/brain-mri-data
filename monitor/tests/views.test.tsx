@@ -90,6 +90,26 @@ describe("new study workflow", () => {
     expect(screen.getByText("0.812")).toBeInTheDocument();
     expect(screen.getByText("This case only")).toBeInTheDocument();
   });
+
+  it("marks an empty outline for review without implying a clear scan", async () => {
+    const validation = { schema_version: "research-study-validation/v1", status: "pass", modality_count: 4, modalities: ["t1", "t1ce", "t2", "flair"], geometry_match: true, shape: [8, 9, 10], spacing_mm: [1, 1, 1], geometry_sha256: "a".repeat(64), modality_sha256: { t1: "b".repeat(64), t1ce: "c".repeat(64), t2: "d".repeat(64), flair: "e".repeat(64) } };
+    const validated = { schemaVersion: "research-study-job/v1", jobId: "65ecf1c3-ae23-4c40-ae7f-6aecc9453904", state: "validated", createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z", expiresAt: "2026-09-02T00:00:00Z", validation, result: null, explanation: null, error: null, artifacts: [] };
+    const result = { schema_version: "research-segmentation-result/v1", disclaimer: "Research output only", input_qc: validation, segmentation: { status: "complete", output_sha256: "f".repeat(64), output_shape: [8, 9, 10], geometry_preserved: true, labels: [0, 1], label_count: 2, nonzero_voxels: 0 }, provenance: { model_id: "glioma-segresnet-20260828", checkpoint_sha256: "1".repeat(64) } };
+    const succeeded = { ...validated, state: "succeeded", result, explanation: { schema_version: "research-segmentation-explanation/v1", deterministic: { disclaimer: "Research only", summary: "The research model produced an empty outline containing 0 voxels.", evidence: [], limitations: "An empty model outline does not establish that no lesion is present.", abstained: false }, llm: { status: "unavailable", artifact: null, reason: "not configured", model_name: null, model_digest: null } }, artifacts: ["segmentation", "receipt", "explanation"] };
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(capabilities), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(validated), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ...validated, state: "running" }), { status: 202 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(succeeded), { status: 200 })));
+    const { container } = render(<StudyView />);
+    await screen.findByText("Ready to run");
+    Array.from(container.querySelectorAll<HTMLInputElement>('input[type="file"]')).slice(0, 4).forEach((input, index) => fireEvent.change(input, { target: { files: [new File([`v-${index}`], `v-${index}.nii`)] } }));
+    fireEvent.click(screen.getByRole("button", { name: "Check my files" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Create outline" }));
+    expect(await screen.findByRole("heading", { name: "No outline produced" }, { timeout: 3_000 })).toBeInTheDocument();
+    expect(screen.getByText(/does not mean the scan is clear/i)).toBeInTheDocument();
+    expect(screen.getByText(/does not establish that no lesion is present/i)).toBeInTheDocument();
+  });
 });
 
 describe("evidence view safety and completeness", () => {

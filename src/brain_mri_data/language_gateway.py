@@ -182,7 +182,23 @@ def deterministic_result_explanation(
     """Explain only validated serving metadata, never the MRI or its meaning."""
     data = envelope.model_dump(mode="json")
     nonzero = envelope.segmentation.nonzero_voxels
-    if envelope.evaluation is not None:
+    if nonzero == 0:
+        if envelope.evaluation is not None:
+            summary = (
+                "The four scan files and reference outline passed the checks. "
+                "The research model produced an empty outline, and its Dice, IoU, precision, "
+                "and recall were all 0.0000 on this case."
+            )
+        else:
+            summary = (
+                "The four scan files passed the checks. "
+                "The research model produced an empty outline containing 0 voxels."
+            )
+        limitations = (
+            "An empty model outline does not establish that no lesion is present. Treat this as "
+            "an unverified model result requiring expert review. This tool is for research only."
+        )
+    elif envelope.evaluation is not None:
         evaluation = envelope.evaluation
         summary = (
             "The four scan files and reference outline passed the checks. "
