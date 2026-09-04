@@ -94,8 +94,8 @@ class LanguageGatewayTests(unittest.TestCase):
     def test_new_study_explanation_uses_metadata_without_accuracy_claims(self) -> None:
         result = serving_result()
         explanation = deterministic_result_explanation(result)
-        self.assertIn("42117 non-zero output voxels", explanation["summary"])
-        self.assertIn("No reference mask was supplied", explanation["limitations"])
+        self.assertIn("outline containing 42117 voxels", explanation["summary"])
+        self.assertIn("no expert-made outline", explanation["limitations"])
         self.assertNotIn("dice", explanation["summary"].lower())
         prompt = result_explainer_prompt(result)
         self.assertNotIn("modality_sha256", prompt)

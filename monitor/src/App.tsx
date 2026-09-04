@@ -2,20 +2,14 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type {
   DashboardSnapshot,
   EvidenceResource as EvidencePayload,
-  ExplanationResource as ExplanationPayload,
   HostEnvelope,
-  ProposalResource as ProposalPayload,
   RecentRun,
   ResourceEnvelope,
   RunSnapshot
 } from "./types";
 import type { EvidenceResource as EvidenceViewModel } from "./views/EvidenceView";
-import type { ExplanationViewModel } from "./views/ExplanationsView";
-import type { JobProposal, ProposalsViewModel } from "./views/ProposalsView";
 
 const EvidenceView = lazy(() => import("./views/EvidenceView"));
-const ExplanationsView = lazy(() => import("./views/ExplanationsView"));
-const ProposalsView = lazy(() => import("./views/ProposalsView"));
 const StudyView = lazy(() => import("./views/StudyView"));
 
 type MetricKey = "meanDice" | "meanBoxIou" | "meanHd95Mm";
@@ -26,14 +20,12 @@ const metrics: Record<MetricKey, { label: string; unit: string; color: string; d
   meanHd95Mm: { label: "HD95", unit: " mm", color: "var(--warning)", domain: [0, "auto"] }
 };
 
-type ViewKey = "study" | "operations" | "evidence" | "explanations" | "proposals";
+type ViewKey = "study" | "operations" | "evidence";
 
 const views: ReadonlyArray<{ key: ViewKey; label: string }> = [
-  { key: "study", label: "New study" },
-  { key: "operations", label: "Operations" },
-  { key: "evidence", label: "Model evidence" },
-  { key: "explanations", label: "Explanations" },
-  { key: "proposals", label: "Proposals" }
+  { key: "study", label: "Try it" },
+  { key: "operations", label: "System status" },
+  { key: "evidence", label: "Model results" }
 ];
 
 function viewFromHash(): ViewKey {
@@ -302,44 +294,6 @@ function evidenceModel(envelope: ResourceEnvelope<EvidencePayload> | null): Evid
   };
 }
 
-function explanationModel(envelope: ResourceEnvelope<ExplanationPayload> | null): ExplanationViewModel | null {
-  if (!envelope?.data || envelope.source.status === "rejected") return null;
-  const deterministic = record(envelope.data.deterministic);
-  const llmArtifact = record(envelope.data.llm.artifact);
-  const llmStatus = envelope.data.llm.status === "validated" ? "valid" : envelope.data.llm.status;
-  const limitations = deterministic.limitations;
-  const evidence = Array.isArray(deterministic.evidence) ? deterministic.evidence.map(item => record(item)).map(item => ({ field: String(item.field || "unknown"), value: item.value == null || ["string", "number"].includes(typeof item.value) ? item.value as string | number | null : JSON.stringify(item.value) })) : [];
-  return {
-    deterministicSummary: String(deterministic.summary || "No deterministic summary supplied."),
-    deterministicLimitations: Array.isArray(limitations) ? limitations.map(String) : [String(limitations || "No limitations supplied.")],
-    llmSummary: typeof llmArtifact.summary === "string" ? llmArtifact.summary : null,
-    llmLimitations: Array.isArray(llmArtifact.limitations) ? llmArtifact.limitations.map(String) : [],
-    llmStatus,
-    fallbackReason: envelope.data.llm.reason,
-    evidence,
-    provenance: {
-      schemaVersion: envelope.schemaVersion,
-      exportId: String(llmArtifact.exportId || "No export ID supplied"),
-      artifactHash: envelope.artifactDigest || "No artifact hash supplied",
-      modelName: typeof llmArtifact.modelName === "string" ? llmArtifact.modelName : null,
-      modelDigest: typeof llmArtifact.modelDigest === "string" ? llmArtifact.modelDigest : null,
-      generatedAt: envelope.generatedAt
-    },
-    validationStatus: envelope.data.llm.status === "rejected" ? "rejected" : "valid"
-  };
-}
-
-function proposalModel(envelope: ResourceEnvelope<ProposalPayload> | null): ProposalsViewModel | null {
-  if (!envelope?.data || envelope.source.status === "rejected") return null;
-  const jobs = envelope.data.jobs.map(item => record(item)).map(job => ({ runId: String(job.runId || "No run ID"), profile: String(job.profile || "No profile"), state: String(job.state || "unavailable"), reasonCode: String(job.reasonCode || "not_preapproved"), proposalAllowed: job.proposalAllowed === true }));
-  const proposals = envelope.data.proposals.map(item => record(item)).map((proposal): JobProposal => {
-    const code = String(proposal.reasonCode || "unavailable");
-    const state: JobProposal["state"] = code === "exact_preapproved_match" ? "exact-match" : code === "unsafe_request" ? "unsafe" : code === "already_complete" ? "already-complete" : code === "unavailable" ? "unavailable" : "abstained";
-    return { runId: typeof proposal.runId === "string" ? proposal.runId : null, profile: typeof proposal.profile === "string" ? proposal.profile : null, state, reason: String(proposal.reason || "No proposal reason supplied."), executed: false };
-  });
-  return { jobs, proposals };
-}
-
 export function App() {
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(() => {
     try {
@@ -390,17 +344,15 @@ export function App() {
   }, []);
 
   const evidence = useResource<ResourceEnvelope<EvidencePayload>>("/api/evidence", activeView === "evidence");
-  const explanation = useResource<ResourceEnvelope<ExplanationPayload>>("/api/explanation", activeView === "explanations");
-  const proposals = useResource<ResourceEnvelope<ProposalPayload>>("/api/proposals", activeView === "proposals");
   const reporting = snapshot ? ([snapshot.hosts.nvidia, snapshot.hosts.amd]).filter(host => host.reachable && !host.stale).length : 0;
 
   return <div className="shell">
     <a className="skip-link" href="#main-content">Skip to current view</a>
     <header className="masthead">
-      <div className="product-identity"><strong>Brain MRI workspace</strong></div>
+      <div className="product-identity"><strong>Brain MRI demo</strong></div>
       <div className="network-summary"><strong>{snapshot ? `${reporting}/2 workers online` : "Checking workers"}</strong></div>
     </header>
-    <div className="prototype-notice" role="note"><strong>Research use only</strong><span>Not for diagnosis or treatment.</span></div>
+    <div className="prototype-notice" role="note"><strong>For research only</strong><span>Not medical advice.</span></div>
     <nav className="view-nav" aria-label="Research workspace">
       <div className="view-nav__links">{views.map(view => <a key={view.key} href={`#${view.key}`} aria-current={activeView === view.key ? "page" : undefined}>{view.label}</a>)}</div>
       <label className="view-nav__select"><span>Current view</span><select value={activeView} onChange={event => { window.location.hash = event.target.value; }}>{views.map(view => <option key={view.key} value={view.key}>{view.label}</option>)}</select></label>
@@ -411,8 +363,6 @@ export function App() {
         {activeView === "study" ? <StudyView /> : null}
         {activeView === "operations" ? snapshot ? <OverviewView snapshot={snapshot} now={now} /> : <Loading /> : null}
         {activeView === "evidence" ? evidence.loading ? <Loading /> : evidence.error ? <div className="view-error" role="alert"><strong>Model evidence unavailable</strong><span>{evidence.error}</span></div> : <EvidenceView resource={evidenceModel(evidence.data)} /> : null}
-        {activeView === "explanations" ? explanation.loading ? <Loading /> : explanation.error ? <div className="view-error" role="alert"><strong>Explanation unavailable</strong><span>{explanation.error}</span></div> : <ExplanationsView explanation={explanationModel(explanation.data)} /> : null}
-        {activeView === "proposals" ? proposals.loading ? <Loading /> : proposals.error ? <div className="view-error" role="alert"><strong>Proposal data unavailable</strong><span>{proposals.error}</span></div> : <ProposalsView data={proposalModel(proposals.data)} /> : null}
       </Suspense>
     </main>
     <footer><span>Local gateway · fixed research model · no scan access for the LLM</span><span>{snapshot ? `Operations collection every ${snapshot.pollIntervalMs / 1000}s` : "Operations collection unavailable"} · generated {snapshot ? formatTimestamp(snapshot.generatedAt) : "not yet"}</span></footer>

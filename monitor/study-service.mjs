@@ -2,7 +2,7 @@ import Busboy from "busboy";
 import { createHash, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createReadStream, createWriteStream } from "node:fs";
-import { access, chmod, mkdir, open, readFile, readdir, rm, stat } from "node:fs/promises";
+import { access, chmod, copyFile, mkdir, open, readFile, readdir, rm, stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { finished } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
@@ -149,6 +149,7 @@ export function createStudyService(options = {}) {
   const runner = options.runner || join(repoRoot, "scripts", "run_4060_research_inference.py");
   const checkpoint = options.checkpoint || join(repoRoot, "runs", "glioma-pilot--cuda-4060--brats--20260828--e100", "best.pt");
   const expectedCheckpointSha256 = options.expectedCheckpointSha256 || EXPECTED_CHECKPOINT_SHA256;
+  const demoDirectory = options.demoDirectory || process.env.BRAIN_MRI_DEMO_DIR || null;
   const deviceProbe = options.deviceProbe || (async () => {
     const result = await runJsonProcess(python, ["-c", "import json, torch; print(json.dumps({'cuda': torch.cuda.is_available()}))"], {
       cwd: repoRoot, timeoutMs: 15_000, spawnImpl: options.spawnImpl
@@ -190,6 +191,7 @@ export function createStudyService(options = {}) {
         llm: process.env.BRAIN_MRI_LLM_MODEL ? "configured" : "not_configured",
         model: process.env.BRAIN_MRI_LLM_MODEL || null
       },
+      demoAvailable: Boolean(demoDirectory),
       limits: { files: 4, perFileBytes: MAX_FILE_BYTES, totalBytes: MAX_TOTAL_BYTES, retentionHours: 24 }
     };
   }
@@ -341,6 +343,51 @@ export function createStudyService(options = {}) {
     }
   }
 
+  async function loadDemo(req, res) {
+    validateMutationRequest(req, bindHost, publicHosts);
+    rateLimit();
+    await refreshCapabilities();
+    if (capabilities.inference.status !== "ready") {
+      return sendJson(res, 503, { error: "model_unavailable", detail: "The model is not ready." });
+    }
+    if (!demoDirectory) return sendJson(res, 404, { error: "demo_unavailable" });
+    const entries = await readdir(demoDirectory, { withFileTypes: true });
+    const sources = Object.keys(MODALITIES).map(modality => {
+      const matches = entries.filter(entry => entry.isFile() && new RegExp(`_${modality}\\.nii(?:\\.gz)?$`, "i").test(entry.name));
+      if (matches.length !== 1) throw new Error(`Demo ${modality} volume is unavailable`);
+      return [modality, join(demoDirectory, matches[0].name)];
+    });
+    const jobId = randomUUID();
+    const directory = join(runtimeRoot, jobId);
+    const inputDirectory = join(directory, "input");
+    await mkdir(inputDirectory, { recursive: true, mode: 0o700 });
+    try {
+      for (const [modality, source] of sources) {
+        const destination = join(inputDirectory, `research_input_${MODALITIES[modality]}.nii`);
+        await copyFile(source, destination);
+        await chmod(destination, 0o600);
+      }
+      const validation = await runJsonProcess(python, [runner, inputDirectory, "--validate-only"], {
+        cwd: repoRoot, timeoutMs: 90_000, spawnImpl: options.spawnImpl
+      });
+      if (validation.schema_version !== "research-study-validation/v1" || validation.status !== "pass") {
+        throw new Error("The demo did not pass the file check");
+      }
+      const now = new Date();
+      const job = {
+        jobId, state: "validated", createdAt: now.toISOString(), updatedAt: now.toISOString(),
+        expiresAt: new Date(now.getTime() + RETENTION_MS).toISOString(), directory, validation,
+        uploadMetadata: {}, result: null, explanation: null, error: null
+      };
+      jobs.set(jobId, job);
+      await persist(job);
+      sendJson(res, 201, publicJob(job));
+    } catch (error) {
+      await rm(directory, { recursive: true, force: true });
+      throw error;
+    }
+  }
+
   async function runJob(job) {
     activeJobId = job.jobId;
     job.state = "running";
@@ -425,6 +472,7 @@ export function createStudyService(options = {}) {
       await refreshCapabilities();
       return sendJson(res, 200, capabilities);
     }
+    if (req.method === "POST" && path === "/api/studies/demo") return await loadDemo(req, res);
     if (req.method === "POST" && path === "/api/studies") return await upload(req, res);
     const inference = path.match(/^\/api\/studies\/([0-9a-f-]+)\/inference$/);
     if (req.method === "POST" && inference && UUID_V4.test(inference[1])) return await beginInference(req, res, inference[1]);

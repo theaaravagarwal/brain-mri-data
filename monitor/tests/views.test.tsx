@@ -10,6 +10,7 @@ const capabilities = {
   generatedAt: "2026-09-01T00:00:00Z",
   inference: { status: "ready", modelId: "glioma-segresnet-20260828", modelScope: "internal_research_only", checkpointSha256: "1".repeat(64), observedCheckpointSha256: "1".repeat(64), outputKind: "binary_whole_lesion_research_segmentation", device: "NVIDIA GeForce RTX 4060" },
   explanation: { deterministic: "available", llm: "not_configured", model: null },
+  demoAvailable: true,
   limits: { files: 4, perFileBytes: 536870912, totalBytes: 2147483648, retentionHours: 24 }
 };
 
@@ -20,23 +21,23 @@ describe("new study workflow", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify(capabilities), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     render(<StudyView />);
-    const retry = await screen.findByRole("button", { name: "Retry capability check" });
-    expect(screen.getByText("gateway unavailable")).toBeInTheDocument();
+    const retry = await screen.findByRole("button", { name: "Try connection again" });
+    expect(screen.getByText("Connection check failed")).toBeInTheDocument();
     fireEvent.click(retry);
-    expect(await screen.findByText("glioma-segresnet-20260828")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Retry capability check" })).not.toBeInTheDocument();
+    expect(await screen.findByText("Ready to run")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try connection again" })).not.toBeInTheDocument();
   });
 
   it("requires four named volumes and exposes no scan preview", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(capabilities), { status: 200, headers: { "Content-Type": "application/json" } })));
     const { container } = render(<StudyView />);
-    expect(await screen.findByText("glioma-segresnet-20260828")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Validate study" })).toBeDisabled();
+    expect(await screen.findByText("Ready to run")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Try with sample scans" })).toBeEnabled();
     expect(container.querySelector("img, canvas, video")).toBeNull();
     const inputs = container.querySelectorAll<HTMLInputElement>('input[type="file"]');
     expect(inputs).toHaveLength(4);
     inputs.forEach((input, index) => fireEvent.change(input, { target: { files: [new File([`volume-${index}`], `volume-${index}.nii.gz`, { type: "application/gzip" })] } }));
-    expect(screen.getByRole("button", { name: "Validate study" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Check my files" })).toBeEnabled();
     expect(screen.getByText(/MiB selected/)).toBeInTheDocument();
   });
 
@@ -57,14 +58,14 @@ describe("new study workflow", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify(succeeded), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const { container } = render(<StudyView />);
-    await screen.findByText("glioma-segresnet-20260828");
+    await screen.findByText("Ready to run");
     container.querySelectorAll<HTMLInputElement>('input[type="file"]').forEach((input, index) => fireEvent.change(input, { target: { files: [new File([`v-${index}`], `v-${index}.nii.gz`, { type: "application/gzip" })] } }));
-    fireEvent.click(screen.getByRole("button", { name: "Validate study" }));
+    fireEvent.click(screen.getByRole("button", { name: "Check my files" }));
     expect(await screen.findByText("240 × 240 × 155 voxels")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Run fixed CNN" }));
-    await waitFor(() => expect(screen.getByText("Research segmentation complete")).toBeInTheDocument(), { timeout: 3_000 });
-    expect(screen.getByText(/LLM explanation unavailable/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Download exact receipt" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Create outline" }));
+    await waitFor(() => expect(screen.getByText("Research outline ready")).toBeInTheDocument(), { timeout: 3_000 });
+    expect(screen.getByText("Showing the checked facts.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Download technical receipt" })).toBeInTheDocument();
   });
 });
 

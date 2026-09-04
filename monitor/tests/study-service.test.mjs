@@ -97,14 +97,17 @@ async function fixture({ bindHost, publicHosts, deviceProbe = async () => true }
   const python = join(repoRoot, ".venv", "bin", "python");
   const runner = join(repoRoot, "scripts", "runner.py");
   const checkpoint = join(repoRoot, "runs", "best.pt");
+  const demoDirectory = join(repoRoot, "demo");
   await mkdir(join(repoRoot, ".venv", "bin"), { recursive: true });
   await mkdir(join(repoRoot, "scripts"), { recursive: true });
   await mkdir(join(repoRoot, "runs"), { recursive: true });
+  await mkdir(demoDirectory, { recursive: true });
+  for (const modality of ["t1", "t1ce", "t2", "flair"]) await writeFile(join(demoDirectory, `sample_${modality}.nii`), modality);
   await writeFile(python, "python");
   await writeFile(runner, "runner");
   await writeFile(checkpoint, "checkpoint");
   const expectedCheckpointSha256 = createHash("sha256").update("checkpoint").digest("hex");
-  const service = createStudyService({ repoRoot, runtimeRoot, python, runner, checkpoint, expectedCheckpointSha256, spawnImpl: fakeSpawn(), deviceProbe, bindHost, publicHosts });
+  const service = createStudyService({ repoRoot, runtimeRoot, python, runner, checkpoint, expectedCheckpointSha256, demoDirectory, spawnImpl: fakeSpawn(), deviceProbe, bindHost, publicHosts });
   await service.initialize();
   return { root, runtimeRoot, checkpoint, service };
 }
@@ -116,7 +119,22 @@ test("capabilities expose the exact ready checkpoint without a path", async () =
   const value = response.json();
   assert.equal(value.inference.status, "ready");
   assert.equal(value.inference.checkpointSha256, service.constants.EXPECTED_CHECKPOINT_SHA256);
+  assert.equal(value.demoAvailable, true);
   assert.equal(JSON.stringify(value).includes("/runs/"), false);
+});
+
+test("built-in demo creates a validated private study without an upload", async () => {
+  const { service, runtimeRoot } = await fixture();
+  const response = await call(service, "POST", "/api/studies/demo", {
+    headers: { origin: "http://127.0.0.1:4173", "sec-fetch-site": "same-origin" }
+  });
+  assert.equal(response.status, 201, response.body.toString());
+  const job = response.json();
+  assert.equal(job.state, "validated");
+  assert.equal(JSON.stringify(job).includes("sample_"), false);
+  assert.deepEqual((await readdir(join(runtimeRoot, job.jobId, "input"))).sort(), [
+    "research_input_0000.nii", "research_input_0001.nii", "research_input_0002.nii", "research_input_0003.nii"
+  ]);
 });
 
 test("capabilities fail closed when CUDA is unavailable", async () => {

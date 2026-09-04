@@ -172,18 +172,17 @@ def deterministic_result_explanation(
     return {
         "disclaimer": DISCLAIMER,
         "summary": (
-            "Input validation passed for four co-registered MRI volumes. "
-            "The fixed research model completed a geometry-preserving binary segmentation "
-            f"with {nonzero} non-zero output voxels."
+            "The four scan files passed the checks. "
+            f"The research model made an outline containing {nonzero} voxels."
         ),
         "evidence": [
             {"field": field, "value": _dotted_value(data, field)}
             for field in RESULT_EVIDENCE_FIELDS
         ],
         "limitations": (
-            "No reference mask was supplied, so accuracy, Dice, or clinical meaning cannot be "
-            "determined from this result. The model is an internal adult-glioma "
-            "research prototype and the output requires expert research review."
+            "There is no expert-made outline to compare against, so this page cannot tell you "
+            "whether the result is accurate. This tool is for research only and the outline "
+            "needs expert review."
         ),
         "abstained": False,
     }

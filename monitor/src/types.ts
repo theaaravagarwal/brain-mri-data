@@ -135,6 +135,7 @@ export type StudyCapabilities = {
     llm: "configured" | "not_configured";
     model: string | null;
   };
+  demoAvailable: boolean;
   limits: { files: 4; perFileBytes: number; totalBytes: number; retentionHours: number };
 };
 
