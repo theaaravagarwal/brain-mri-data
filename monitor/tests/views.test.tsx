@@ -70,17 +70,19 @@ describe("new study workflow", () => {
 });
 
 describe("evidence view safety and completeness", () => {
-  it("renders promotion blocked and missing evidence", () => {
+  it("keeps the baseline default when evidence is missing", () => {
     render(<EvidenceView resource={{ studyId: "study-1", scope: "internal validation", seeds: [{ seed: 1, baseline: .7, candidate: .71 }], gate: { allowed: false, missing: ["3 seeds per arm", "paired confidence interval"] } }} />);
-    expect(screen.getAllByText("Promotion blocked").length).toBeGreaterThan(0);
+    expect(screen.getByText("Baseline stays the default")).toBeInTheDocument();
     expect(screen.getByText("3 seeds per arm")).toBeInTheDocument();
     expect(screen.getByText("paired confidence interval")).toBeInTheDocument();
     expect(screen.getByRole("table", { name: /seed-level results/i })).toBeInTheDocument();
   });
 
   it("renders a rejected candidate and retained internal model", () => {
-    render(<EvidenceView resource={{ studyId: "glioma", scope: "internal validation", selectedModel: { label: "baseline", seed: 20260821, readiness: "internal research only" }, seeds: [{ seed: 20260821, baseline: .9063, candidate: .9043 }, { seed: 20260822, baseline: .9004, candidate: .9007 }, { seed: 20260823, baseline: .9039, candidate: .9034 }], effects: [{ label: "Whole-tumor Dice", delta: -.0007, ci95: [-.0020, .0005], higherIsBetter: true, exploratory: false }], gate: { allowed: false, missing: ["independent external evaluation"], decision: "Candidate rejected; baseline retained." } }} />);
-    expect(screen.getByText("Candidate rejected", { selector: "span" })).toBeInTheDocument();
+    render(<EvidenceView resource={{ studyId: "glioma", scope: "internal validation", selectedModel: { label: "baseline", seed: 20260821, readiness: "internal research only" }, researchUse: { allowed: true, reason: "Keep it available for controlled comparisons." }, seeds: [{ seed: 20260821, baseline: .9063, candidate: .9043 }, { seed: 20260822, baseline: .9004, candidate: .9007 }, { seed: 20260823, baseline: .9039, candidate: .9034 }], effects: [{ label: "Whole-tumor Dice", delta: -.0007, ci95: [-.0020, .0005], higherIsBetter: true, exploratory: false }], gate: { allowed: false, missing: ["independent external evaluation"], decision: "Candidate rejected for default selection; baseline retained." } }} />);
+    expect(screen.getByText("Candidate testable", { selector: "span" })).toBeInTheDocument();
+    expect(screen.getByText("Candidate allowed for controlled comparisons")).toBeInTheDocument();
+    expect(screen.getByText("Baseline stays the default")).toBeInTheDocument();
     expect(screen.getByText(/baseline · seed 20260821/)).toBeInTheDocument();
     expect(screen.getByText("internal research only")).toBeInTheDocument();
     expect(screen.getByRole("table", { name: /case-cluster bootstrap intervals/i })).toBeInTheDocument();

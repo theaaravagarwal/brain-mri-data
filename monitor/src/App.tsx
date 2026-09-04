@@ -288,7 +288,17 @@ function evidenceModel(envelope: ResourceEnvelope<EvidencePayload> | null): Evid
     ],
     effects,
     seeds: baselineSeeds.map(item => ({ seed: number(item.seed) ?? "—", baseline: number(item.wholeTumorDice), candidate: candidateBySeed.get(number(item.seed)) ?? null })),
-    gate: { allowed: envelope.data.promotion.status === "selected", missing: envelope.data.promotion.missing, decision: String(promotion.rationale || "Automatic promotion remains disabled.") },
+    researchUse: {
+      allowed: Boolean(candidate.variantId),
+      reason: "Keep this model available for labeled, controlled research comparisons. Its whole-tumor scores were close to the baseline, but tumor-core Dice and boundary distance were worse, so it is not the default."
+    },
+    gate: {
+      allowed: envelope.data.promotion.status === "selected",
+      missing: envelope.data.promotion.missing,
+      decision: envelope.data.promotion.status === "selected"
+        ? String(promotion.rationale || "Candidate selected for human review.")
+        : "The baseline remains the default because the candidate weakened tumor-core Dice and boundary distance. This does not block controlled research comparisons."
+    },
     selectedModel: selectedModel.variantId ? { label: String(selectedModel.variantId), seed: number(selectedModel.seed) ?? "—", readiness: String(selectedModel.readiness || "internal research only").replaceAll("_", " ") } : null,
     provenance: { evidenceContentHash: envelope.artifactDigest, checkpointHash: typeof selectedModel.checkpointSha256 === "string" ? selectedModel.checkpointSha256 : null, sourceRevision: typeof selectedModel.sourceRevision === "string" ? selectedModel.sourceRevision : null, analysisPlanHash: typeof selectedModel.analysisPlanSha256 === "string" ? selectedModel.analysisPlanSha256 : null, schemaVersion: envelope.schemaVersion, generatedAt: envelope.generatedAt }
   };
