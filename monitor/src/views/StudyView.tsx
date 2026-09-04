@@ -143,6 +143,8 @@ export default function StudyView() {
   const shownExplanation = llm?.status === "validated" && llm.artifact ? llm.artifact : job?.explanation?.deterministic;
   const evaluation = job?.result?.evaluation;
   const emptyOutline = job?.result?.segmentation.nonzero_voxels === 0;
+  const smallOutline = Boolean(job?.result && job.result.segmentation.nonzero_voxels > 0 && job.result.segmentation.nonzero_voxels < 1000);
+  const outputNeedsReview = emptyOutline || smallOutline;
   const benchmark = capabilities?.externalBenchmark;
   const benchmarkDice = benchmark?.metrics?.whole_lesion_dice;
   const benchmarkHd95 = benchmark?.metrics?.hd95_mm;
@@ -172,6 +174,7 @@ export default function StudyView() {
         <span className="eyebrow">Separate public test set</span>
         <h2 id="external-benchmark-title">{benchmark.status === "complete" ? `Tested on ${benchmark.case_count} unseen cases` : `Testing ${benchmark.completed_cases}/${benchmark.total_cases} cases`}</h2>
         <p>{benchmark.status === "complete" ? "The fixed model was tested once on data kept out of training and tuning." : "The fixed model is running through the full outside dataset now."}</p>
+        {benchmark.status === "complete" ? <a className="external-report-link" href="/api/external-benchmark/report" download>Download validation report</a> : null}
       </div>
       {benchmark.status === "complete" && benchmarkDice && benchmarkHd95 ? <dl>
         <div><dt>Average Dice</dt><dd>{benchmarkDice.mean.toFixed(3)}</dd><small>95% range for the mean: {benchmarkDice.mean_ci95[0].toFixed(3)}–{benchmarkDice.mean_ci95[1].toFixed(3)}</small></div>
@@ -226,8 +229,8 @@ export default function StudyView() {
       </aside>
     </div>
 
-    {job?.state === "succeeded" && job.result && shownExplanation ? <section className={`study-result ${emptyOutline ? "study-result--empty" : ""}`} aria-labelledby="result-title">
-      <div className="result-heading"><div><h2 id="result-title">{emptyOutline ? "No outline produced" : evaluation ? "Accuracy test ready" : "Research outline ready"}</h2><p role="note">{emptyOutline ? "This does not mean the scan is clear—expert review is required." : "For research only—not a medical result."}</p></div><StatusMark state={emptyOutline ? "failed" : "complete"} label={emptyOutline ? "review" : "complete"} /></div>
+    {job?.state === "succeeded" && job.result && shownExplanation ? <section className={`study-result ${outputNeedsReview ? "study-result--empty" : ""}`} aria-labelledby="result-title">
+      <div className="result-heading"><div><h2 id="result-title">{emptyOutline ? "No outline produced" : smallOutline ? "Very small outline—review carefully" : evaluation ? "Accuracy test ready" : "Research outline ready"}</h2><p role="note">{outputNeedsReview ? "This does not mean the scan is clear—expert review is required." : "For research only—not a medical result."}</p></div><StatusMark state={outputNeedsReview ? "failed" : "complete"} label={outputNeedsReview ? "review" : "complete"} /></div>
       <div className="result-grid">
         <div className="result-summary">
           {evaluation ? <div className="evaluation-block">

@@ -174,6 +174,7 @@ th:last-child, td:last-child { padding-right: 0; }
 .external-benchmark { display: grid; grid-template-columns: minmax(240px, .8fr) minmax(0, 1.2fr); gap: 32px; align-items: end; padding: 28px 0; border-bottom: 1px solid var(--rule-strong); }
 .external-benchmark h2 { margin: 5px 0 6px; font-size: clamp(1.2rem, 2vw, 1.65rem); }
 .external-benchmark p { margin: 0; color: var(--muted); max-width: 58ch; }
+.external-report-link { display: inline-block; margin-top: 10px; color: var(--active); font-size: .78rem; font-weight: 650; text-underline-offset: 3px; }
 .external-benchmark dl { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; }
 .external-benchmark dl > div { padding: 4px 18px; border-left: 1px solid var(--rule-strong); }
 .external-benchmark dt, .external-benchmark small { color: var(--muted); font-size: .76rem; }

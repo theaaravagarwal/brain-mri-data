@@ -1,0 +1,40 @@
+{
+  "benchmark_id": "fixed-segresnet-brats-ssa-20260904",
+  "clusters": {
+    "empty_prediction": 1,
+    "other_overlap_or_boundary_error": 3,
+    "substantial_oversegmentation": 2
+  },
+  "privacy": {
+    "case_tokens_included": false,
+    "native_case_ids_included": false,
+    "native_paths_included": false
+  },
+  "research_only": true,
+  "retraining_decision": {
+    "current_release": "freeze_and_use_for_research_prototype",
+    "future_evaluation": "Evaluate any new candidate once on a new untouched cohort; do not reuse these 60 cases for selection.",
+    "immediate_retraining": false,
+    "next_experiment": "Use development data only to test stronger small-lesion sampling and preserve the current model as rollback.",
+    "reason": "Failures are mixed rather than one consistent correctable mode; the external cohort remains evaluation-only."
+  },
+  "schema_version": "fixed-segresnet-external-failure-analysis/v1",
+  "scope": "aggregate_descriptive_error_analysis",
+  "weak_case_count": 6,
+  "weak_definition": {
+    "metric": "whole_lesion_dice",
+    "operator": "below",
+    "post_hoc_descriptive": true,
+    "threshold": 0.75
+  },
+  "weak_hd95_mm": {
+    "available_count": 5,
+    "max": 62.18761908159231,
+    "median": 48.14561246884289
+  },
+  "weak_reference_voxels": {
+    "max": 237552,
+    "median": 67071.0,
+    "min": 1026
+  }
+}

@@ -43,6 +43,7 @@ EVALUATION_EVIDENCE_FIELDS = (
     "evaluation.hd95_mm",
 )
 ALL_RESULT_EVIDENCE_FIELDS = RESULT_EVIDENCE_FIELDS + EVALUATION_EVIDENCE_FIELDS
+MIN_REVIEW_VOXELS = 1000
 
 RESULT_EXPLANATION_SCHEMA = {
     "type": "object",
@@ -197,6 +198,16 @@ def deterministic_result_explanation(
         limitations = (
             "An empty model outline does not establish that no lesion is present. Treat this as "
             "an unverified model result requiring expert review. This tool is for research only."
+        )
+    elif nonzero < MIN_REVIEW_VOXELS:
+        summary = (
+            "The four scan files passed the checks. "
+            f"The research model produced a very small outline containing {nonzero} voxels."
+        )
+        limitations = (
+            "A very small model outline may be incomplete and does not establish that other lesion "
+            "voxels are absent. Treat this as an unverified model result requiring expert review. "
+            "This tool is for research only."
         )
     elif envelope.evaluation is not None:
         evaluation = envelope.evaluation

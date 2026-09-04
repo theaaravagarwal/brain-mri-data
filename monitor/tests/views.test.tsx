@@ -16,6 +16,26 @@ const capabilities = {
 };
 
 describe("new study workflow", () => {
+  it("offers the completed external validation report", async () => {
+    const external = {
+      ...capabilities,
+      externalBenchmark: {
+        schema_version: "fixed-segresnet-external-summary/v1",
+        benchmark_id: "fixed-test",
+        status: "complete",
+        case_count: 60,
+        metrics: {
+          whole_lesion_dice: { n: 60, mean: 0.878, median: 0.923, mean_ci95: [0.838, 0.909] },
+          hd95_mm: { n: 59, mean: 12.59, median: 4.47, mean_ci95: [8.56, 17.24] },
+        },
+        failures: { empty_prediction_count: 1, hd95_unavailable_count: 1, case_error_count: 0 },
+      },
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(external), { status: 200 })));
+    render(<StudyView />);
+    expect(await screen.findByRole("link", { name: "Download validation report" })).toHaveAttribute("href", "/api/external-benchmark/report");
+  });
+
   it("offers a retry when the initial capability check fails", async () => {
     const fetchMock = vi.fn()
       .mockRejectedValueOnce(new TypeError("gateway offline"))
@@ -73,7 +93,7 @@ describe("new study workflow", () => {
   it("runs a one-case accuracy test when an expert outline is supplied", async () => {
     const validation = { schema_version: "research-study-validation/v1", status: "pass", modality_count: 4, modalities: ["t1", "t1ce", "t2", "flair"], geometry_match: true, shape: [8, 9, 10], spacing_mm: [1, 1, 1], geometry_sha256: "a".repeat(64), modality_sha256: { t1: "b".repeat(64), t1ce: "c".repeat(64), t2: "d".repeat(64), flair: "e".repeat(64) }, reference_mask: { status: "pass", geometry_match: true, sha256: "9".repeat(64), labels: [0, 1, 4], nonzero_voxels: 100 } };
     const validated = { schemaVersion: "research-study-job/v1", jobId: "65ecf1c3-ae23-4c40-ae7f-6aecc9453904", state: "validated", createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z", expiresAt: "2026-09-02T00:00:00Z", evaluationSampleScope: null, validation, result: null, explanation: null, error: null, artifacts: [] };
-    const result = { schema_version: "research-segmentation-result/v1", disclaimer: "Research output only", input_qc: validation, segmentation: { status: "complete", output_sha256: "f".repeat(64), output_shape: [8, 9, 10], geometry_preserved: true, labels: [0, 1], label_count: 2, nonzero_voxels: 110 }, evaluation: { status: "complete", scope: "single_user_supplied_reference", whole_lesion_dice: 0.8123, whole_lesion_iou: 0.684, precision: 0.79, recall: 0.836, hd95_mm: 5.2, true_positive_voxels: 90, false_positive_voxels: 20, false_negative_voxels: 10 }, provenance: { model_id: "glioma-segresnet-20260828", checkpoint_sha256: "1".repeat(64) } };
+    const result = { schema_version: "research-segmentation-result/v1", disclaimer: "Research output only", input_qc: validation, segmentation: { status: "complete", output_sha256: "f".repeat(64), output_shape: [8, 9, 10], geometry_preserved: true, labels: [0, 1], label_count: 2, nonzero_voxels: 1110 }, evaluation: { status: "complete", scope: "single_user_supplied_reference", whole_lesion_dice: 0.8123, whole_lesion_iou: 0.684, precision: 0.79, recall: 0.836, hd95_mm: 5.2, true_positive_voxels: 90, false_positive_voxels: 20, false_negative_voxels: 10 }, provenance: { model_id: "glioma-segresnet-20260828", checkpoint_sha256: "1".repeat(64) } };
     const succeeded = { ...validated, state: "succeeded", result, explanation: { schema_version: "research-segmentation-explanation/v1", deterministic: { disclaimer: "Research output only", summary: "On this case, Dice was 0.8123.", evidence: [], limitations: "These scores describe one uploaded case only.", abstained: false }, llm: { status: "unavailable", artifact: null, reason: "not configured", model_name: null, model_digest: null } }, artifacts: ["segmentation", "receipt", "explanation"] };
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify(capabilities), { status: 200 }))

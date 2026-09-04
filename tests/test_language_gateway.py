@@ -133,6 +133,13 @@ class LanguageGatewayTests(unittest.TestCase):
         self.assertIn("empty outline", explanation["summary"])
         self.assertIn("does not establish that no lesion is present", explanation["limitations"])
 
+    def test_very_small_outline_requires_review(self) -> None:
+        value = serving_result().model_dump(mode="json")
+        value["segmentation"]["nonzero_voxels"] = 999
+        explanation = deterministic_result_explanation(ResearchSegmentationResultV1.model_validate(value))
+        self.assertIn("very small outline", explanation["summary"])
+        self.assertIn("may be incomplete", explanation["limitations"])
+
     def test_new_study_explanation_requires_exact_evidence(self) -> None:
         result = serving_result()
         explanation = deterministic_result_explanation(result)

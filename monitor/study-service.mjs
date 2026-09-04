@@ -501,6 +501,26 @@ export function createStudyService(options = {}) {
     stream.pipe(res);
   }
 
+  async function serveExternalReport(res) {
+    const path = join(benchmarkDirectory, "validation-report.pdf");
+    try {
+      const info = await stat(path);
+      res.writeHead(200, {
+        "Content-Type": "application/pdf",
+        "Content-Length": info.size,
+        "Content-Disposition": 'attachment; filename="fixed-segresnet-external-validation-report.pdf"',
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff"
+      });
+      const stream = createReadStream(path);
+      stream.on("error", () => res.destroy());
+      stream.pipe(res);
+    } catch (error) {
+      if (error?.code === "ENOENT") return sendJson(res, 404, { error: "validation_report_unavailable" });
+      throw error;
+    }
+  }
+
   async function clear(req, res, jobId) {
     validateMutationRequest(req, bindHost, publicHosts);
     rateLimit();
@@ -519,6 +539,7 @@ export function createStudyService(options = {}) {
       await refreshCapabilities();
       return sendJson(res, 200, capabilities);
     }
+    if (req.method === "GET" && path === "/api/external-benchmark/report") return await serveExternalReport(res);
     if (req.method === "POST" && path === "/api/studies/demo") return await loadDemo(req, res);
     if (req.method === "POST" && path === "/api/studies/demo-evaluation") return await loadDemo(req, res, { evaluation: true });
     if (req.method === "POST" && path === "/api/studies") return await upload(req, res);
@@ -560,5 +581,5 @@ export const studyService = createStudyService();
 
 export function isStudyApiPath(url = "") {
   const path = new URL(url, "http://localhost").pathname;
-  return path === "/api/capabilities" || path === "/api/studies" || path.startsWith("/api/studies/");
+  return path === "/api/capabilities" || path === "/api/external-benchmark/report" || path === "/api/studies" || path.startsWith("/api/studies/");
 }

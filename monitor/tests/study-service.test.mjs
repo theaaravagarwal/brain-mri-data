@@ -155,6 +155,16 @@ test("capabilities expose only aggregate external benchmark results", async () =
   assert.equal(JSON.stringify(response.json()).includes("case_token"), false);
 });
 
+test("external validation report downloads as a PDF", async () => {
+  const { service, benchmarkDirectory } = await fixture();
+  await writeFile(join(benchmarkDirectory, "validation-report.pdf"), "%PDF-release-report");
+  const response = await call(service, "GET", "/api/external-benchmark/report");
+  assert.equal(response.status, 200);
+  assert.equal(response.headers["Content-Type"], "application/pdf");
+  assert.match(response.headers["Content-Disposition"], /fixed-segresnet-external-validation-report\.pdf/);
+  assert.equal(response.body.toString(), "%PDF-release-report");
+});
+
 test("built-in demo creates a validated private study without an upload", async () => {
   const { service, runtimeRoot } = await fixture();
   const response = await call(service, "POST", "/api/studies/demo", {
