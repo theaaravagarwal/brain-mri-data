@@ -150,6 +150,7 @@ export function createStudyService(options = {}) {
   const checkpoint = options.checkpoint || join(repoRoot, "runs", "glioma-pilot--cuda-4060--brats--20260828--e100", "best.pt");
   const expectedCheckpointSha256 = options.expectedCheckpointSha256 || EXPECTED_CHECKPOINT_SHA256;
   const demoDirectory = options.demoDirectory || process.env.BRAIN_MRI_DEMO_DIR || null;
+  const evaluationDemoDirectory = options.evaluationDemoDirectory || process.env.BRAIN_MRI_EVALUATION_DEMO_DIR || null;
   const deviceProbe = options.deviceProbe || (async () => {
     const result = await runJsonProcess(python, ["-c", "import json, torch; print(json.dumps({'cuda': torch.cuda.is_available()}))"], {
       cwd: repoRoot, timeoutMs: 15_000, spawnImpl: options.spawnImpl
@@ -192,7 +193,8 @@ export function createStudyService(options = {}) {
         model: process.env.BRAIN_MRI_LLM_MODEL || null
       },
       demoAvailable: Boolean(demoDirectory),
-      limits: { files: 4, perFileBytes: MAX_FILE_BYTES, totalBytes: MAX_TOTAL_BYTES, retentionHours: 24 }
+      evaluationDemoAvailable: Boolean(evaluationDemoDirectory),
+      limits: { files: 5, perFileBytes: MAX_FILE_BYTES, totalBytes: MAX_TOTAL_BYTES, retentionHours: 24 }
     };
   }
 
@@ -254,18 +256,20 @@ export function createStudyService(options = {}) {
     let totalBytes = 0;
     const parser = Busboy({
       headers: req.headers,
-      limits: { files: 4, fields: 0, parts: 5, fileSize: MAX_FILE_BYTES }
+      limits: { files: 5, fields: 0, parts: 5, fileSize: MAX_FILE_BYTES }
     });
     parser.on("file", (field, stream, info) => {
       const suffix = MODALITIES[field];
-      const validName = typeof info.filename === "string" && info.filename.toLowerCase().endsWith(".nii.gz");
-      const validMime = ["application/octet-stream", "application/gzip", "application/x-gzip", ""].includes(info.mimeType || "");
-      if (!suffix || received.has(field) || !validName || !validMime) {
-        failure ||= "Select exactly one .nii.gz file for each named modality.";
+      const isReference = field === "reference";
+      const lowerName = typeof info.filename === "string" ? info.filename.toLowerCase() : "";
+      const extension = lowerName.endsWith(".nii.gz") ? ".nii.gz" : lowerName.endsWith(".nii") ? ".nii" : null;
+      const validMime = ["application/octet-stream", "application/gzip", "application/x-gzip", "application/x-nifti", ""].includes(info.mimeType || "");
+      if ((!suffix && !isReference) || received.has(field) || !extension || !validMime) {
+        failure ||= "Choose one NIfTI file for each scan type and, optionally, one reference outline.";
         stream.resume();
         return;
       }
-      const destination = join(inputDirectory, `research_input_${suffix}.nii.gz`);
+      const destination = join(inputDirectory, isReference ? `research_reference${extension}` : `research_input_${suffix}${extension}`);
       const output = createWriteStream(destination, { flags: "wx", mode: 0o600 });
       const digest = createHash("sha256");
       let bytes = 0;
@@ -283,12 +287,13 @@ export function createStudyService(options = {}) {
       }));
     });
     parser.on("field", () => { failure ||= "Text fields are not accepted in study uploads."; });
-    parser.on("filesLimit", () => { failure ||= "Exactly four files are required."; });
+    parser.on("filesLimit", () => { failure ||= "A maximum of five files is allowed."; });
     req.pipe(parser);
     await finished(parser);
     await Promise.all(writes);
     if (failure) throw Object.assign(new Error(failure), { status: 400 });
-    if (received.size !== 4 || Object.keys(MODALITIES).some(modality => !received.has(modality))) {
+    const expectedCount = received.has("reference") ? 5 : 4;
+    if (received.size !== expectedCount || Object.keys(MODALITIES).some(modality => !received.has(modality))) {
       throw Object.assign(new Error("Select exactly one T1, T1ce, T2, and FLAIR volume."), { status: 400 });
     }
     return Object.fromEntries(received);
@@ -343,20 +348,25 @@ export function createStudyService(options = {}) {
     }
   }
 
-  async function loadDemo(req, res) {
+  async function loadDemo(req, res, { evaluation = false } = {}) {
     validateMutationRequest(req, bindHost, publicHosts);
     rateLimit();
     await refreshCapabilities();
     if (capabilities.inference.status !== "ready") {
       return sendJson(res, 503, { error: "model_unavailable", detail: "The model is not ready." });
     }
-    if (!demoDirectory) return sendJson(res, 404, { error: "demo_unavailable" });
-    const entries = await readdir(demoDirectory, { withFileTypes: true });
+    const sourceDirectory = evaluation ? evaluationDemoDirectory : demoDirectory;
+    if (!sourceDirectory) return sendJson(res, 404, { error: "demo_unavailable" });
+    const entries = await readdir(sourceDirectory, { withFileTypes: true });
     const sources = Object.keys(MODALITIES).map(modality => {
       const matches = entries.filter(entry => entry.isFile() && new RegExp(`_${modality}\\.nii(?:\\.gz)?$`, "i").test(entry.name));
       if (matches.length !== 1) throw new Error(`Demo ${modality} volume is unavailable`);
-      return [modality, join(demoDirectory, matches[0].name)];
+      return [modality, join(sourceDirectory, matches[0].name)];
     });
+    const reference = evaluation
+      ? entries.find(entry => entry.isFile() && /_seg\.nii(?:\.gz)?$/i.test(entry.name))
+      : null;
+    if (evaluation && !reference) throw new Error("Accuracy sample reference outline is unavailable");
     const jobId = randomUUID();
     const directory = join(runtimeRoot, jobId);
     const inputDirectory = join(directory, "input");
@@ -365,6 +375,12 @@ export function createStudyService(options = {}) {
       for (const [modality, source] of sources) {
         const destination = join(inputDirectory, `research_input_${MODALITIES[modality]}.nii`);
         await copyFile(source, destination);
+        await chmod(destination, 0o600);
+      }
+      if (reference) {
+        const extension = reference.name.toLowerCase().endsWith(".nii.gz") ? ".nii.gz" : ".nii";
+        const destination = join(inputDirectory, `research_reference${extension}`);
+        await copyFile(join(sourceDirectory, reference.name), destination);
         await chmod(destination, 0o600);
       }
       const validation = await runJsonProcess(python, [runner, inputDirectory, "--validate-only"], {
@@ -473,6 +489,7 @@ export function createStudyService(options = {}) {
       return sendJson(res, 200, capabilities);
     }
     if (req.method === "POST" && path === "/api/studies/demo") return await loadDemo(req, res);
+    if (req.method === "POST" && path === "/api/studies/demo-evaluation") return await loadDemo(req, res, { evaluation: true });
     if (req.method === "POST" && path === "/api/studies") return await upload(req, res);
     const inference = path.match(/^\/api\/studies\/([0-9a-f-]+)\/inference$/);
     if (req.method === "POST" && inference && UUID_V4.test(inference[1])) return await beginInference(req, res, inference[1]);

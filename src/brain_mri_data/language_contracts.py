@@ -252,6 +252,14 @@ class JobProposalV1(StrictModel):
         return self
 
 
+class StudyReferenceMaskV1(StrictModel):
+    status: Literal["pass"]
+    geometry_match: Literal[True]
+    sha256: Sha256
+    labels: list[Literal[0, 1, 2, 3, 4]]
+    nonzero_voxels: int = Field(strict=True, gt=0)
+
+
 class StudyInputQcV1(StrictModel):
     schema_version: Literal["research-study-validation/v1"]
     status: Literal["pass"]
@@ -262,6 +270,7 @@ class StudyInputQcV1(StrictModel):
     spacing_mm: list[float]
     geometry_sha256: Sha256
     modality_sha256: dict[Literal["t1", "t1ce", "t2", "flair"], Sha256]
+    reference_mask: StudyReferenceMaskV1 | None = None
 
     @field_validator("shape")
     @classmethod
@@ -300,6 +309,19 @@ class StudySegmentationV1(StrictModel):
         if len(self.output_shape) != 3 or self.labels != [0, 1]:
             raise ValueError("segmentation must preserve a 3D binary output contract")
         return self
+
+
+class StudyEvaluationV1(StrictModel):
+    status: Literal["complete"]
+    scope: Literal["single_user_supplied_reference"]
+    whole_lesion_dice: float = Field(strict=True, ge=0, le=1)
+    whole_lesion_iou: float = Field(strict=True, ge=0, le=1)
+    precision: float = Field(strict=True, ge=0, le=1)
+    recall: float = Field(strict=True, ge=0, le=1)
+    hd95_mm: float | None = Field(default=None, strict=True, ge=0)
+    true_positive_voxels: int = Field(strict=True, ge=0)
+    false_positive_voxels: int = Field(strict=True, ge=0)
+    false_negative_voxels: int = Field(strict=True, ge=0)
 
 
 class StudyInferenceProvenanceV1(StrictModel):
@@ -345,6 +367,7 @@ class ResearchSegmentationResultV1(StrictModel):
     disclaimer: Literal[DISCLAIMER]
     input_qc: StudyInputQcV1
     segmentation: StudySegmentationV1
+    evaluation: StudyEvaluationV1 | None = None
     provenance: StudyInferenceProvenanceV1
 
     @field_validator("job_id")
@@ -359,4 +382,6 @@ class ResearchSegmentationResultV1(StrictModel):
     def output_geometry_matches_input(self) -> ResearchSegmentationResultV1:
         if self.segmentation.output_shape != self.input_qc.shape:
             raise ValueError("segmentation output shape must match the validated input")
+        if (self.evaluation is None) != (self.input_qc.reference_mask is None):
+            raise ValueError("evaluation and validated reference mask must be present together")
         return self

@@ -90,6 +90,30 @@ def serving_result() -> ResearchSegmentationResultV1:
     )
 
 
+def evaluated_result() -> ResearchSegmentationResultV1:
+    value = serving_result().model_dump(mode="json")
+    value["input_qc"]["reference_mask"] = {
+        "status": "pass",
+        "geometry_match": True,
+        "sha256": "9" * 64,
+        "labels": [0, 1, 2, 4],
+        "nonzero_voxels": 44000,
+    }
+    value["evaluation"] = {
+        "status": "complete",
+        "scope": "single_user_supplied_reference",
+        "whole_lesion_dice": 0.8123,
+        "whole_lesion_iou": 0.684,
+        "precision": 0.79,
+        "recall": 0.836,
+        "hd95_mm": 5.2,
+        "true_positive_voxels": 35000,
+        "false_positive_voxels": 9300,
+        "false_negative_voxels": 6866,
+    }
+    return ResearchSegmentationResultV1.model_validate(value)
+
+
 class LanguageGatewayTests(unittest.TestCase):
     def test_new_study_explanation_uses_metadata_without_accuracy_claims(self) -> None:
         result = serving_result()
@@ -110,6 +134,18 @@ class LanguageGatewayTests(unittest.TestCase):
         altered["evidence"][0]["value"] = "fail"
         with self.assertRaisesRegex(ValueError, "exactly match"):
             validate_result_explanation(altered, result)
+
+    def test_labeled_case_explanation_reports_metrics_without_claiming_independence(self) -> None:
+        result = evaluated_result()
+        explanation = deterministic_result_explanation(result)
+        self.assertIn("Dice was 0.8123", explanation["summary"])
+        self.assertIn("one uploaded case only", explanation["limitations"])
+        self.assertIn("cannot verify", explanation["limitations"])
+        prompt = result_explainer_prompt(result)
+        self.assertIn('"whole_lesion_dice": 0.8123', prompt)
+        self.assertNotIn("modality_sha256", prompt)
+        self.assertNotIn("reference_mask", prompt)
+        self.assertEqual(validate_result_explanation(explanation, result), explanation)
         altered = json.loads(json.dumps(explanation))
         altered["limitations"] = "800"
         with self.assertRaisesRegex(ValueError, "limitations"):

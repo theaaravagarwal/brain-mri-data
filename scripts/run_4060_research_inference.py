@@ -40,6 +40,7 @@ PROFILE_SHA256 = "9ec821920b6a08e914306d1651101dd52693d02c185f2750410297ec1c43fc
 TRAINER_SHA256 = "bf5dede3b5b1ee5d916cd6f046ca7eda8ea579f0f730db6f9201e2523b0456d9"
 MAX_AXIS = 512
 MAX_VOXELS = 64_000_000
+REFERENCE_NAMES = ("research_reference.nii.gz", "research_reference.nii")
 
 
 def arguments() -> argparse.Namespace:
@@ -93,14 +94,17 @@ def input_paths(directory: Path) -> list[Path]:
         if matches[0].is_symlink() or matches[0].parent.resolve() != directory.resolve():
             raise ValueError("Input volumes must be regular, non-symlink files")
         paths.append(matches[0])
+    reference = reference_path(directory)
     allowed = {path.resolve() for path in paths}
+    if reference is not None:
+        allowed.add(reference.resolve())
     supplied = {
         path.resolve()
         for path in [*directory.glob("*.nii"), *directory.glob("*.nii.gz")]
         if path.is_file()
     }
     if supplied != allowed:
-        raise ValueError("Input directory must contain exactly the four selected NIfTI volumes")
+        raise ValueError("Input directory must contain four scan volumes and, optionally, one reference mask")
     stems = {
         path.name.removesuffix(f"_{suffix}.nii.gz").removesuffix(f"_{suffix}.nii")
         for path, suffix in zip(paths, MODALITY_SUFFIXES, strict=True)
@@ -108,6 +112,72 @@ def input_paths(directory: Path) -> list[Path]:
     if len(stems) != 1:
         raise ValueError("All four volumes must share one research input stem")
     return paths
+
+
+def reference_path(directory: Path) -> Path | None:
+    matches = [directory / name for name in REFERENCE_NAMES if (directory / name).is_file()]
+    if len(matches) > 1:
+        raise ValueError("Expected at most one reference mask")
+    if matches and (matches[0].is_symlink() or matches[0].parent.resolve() != directory.resolve()):
+        raise ValueError("Reference mask must be a regular, non-symlink file")
+    return matches[0] if matches else None
+
+
+def validate_reference(path: Path, image: nib.Nifti1Image) -> tuple[np.ndarray, dict[str, Any]]:
+    reference = nib.load(path)
+    if tuple(reference.shape) != tuple(image.shape) or not np.allclose(reference.affine, image.affine, rtol=0, atol=1e-5):
+        raise ValueError("Reference mask geometry does not match the scan")
+    values = np.asarray(reference.dataobj)
+    if not np.isfinite(values).all() or not np.equal(values, np.rint(values)).all():
+        raise ValueError("Reference mask must contain finite integer labels")
+    labels = sorted(int(value) for value in np.unique(values))
+    if not set(labels).issubset({0, 1, 2, 3, 4}):
+        raise ValueError("Reference mask contains unsupported labels")
+    binary = values != 0
+    nonzero = int(np.count_nonzero(binary))
+    if nonzero == 0:
+        raise ValueError("Reference mask must contain a non-empty lesion outline")
+    return binary, {
+        "status": "pass",
+        "geometry_match": True,
+        "sha256": sha256(path),
+        "labels": labels,
+        "nonzero_voxels": nonzero,
+    }
+
+
+def evaluation_metrics(prediction: np.ndarray, truth: np.ndarray, spacing: tuple[float, ...]) -> dict[str, Any]:
+    from scipy.ndimage import binary_erosion, distance_transform_edt, generate_binary_structure
+
+    predicted = prediction.astype(bool, copy=False)
+    expected = truth.astype(bool, copy=False)
+    true_positive = int(np.count_nonzero(predicted & expected))
+    false_positive = int(np.count_nonzero(predicted & ~expected))
+    false_negative = int(np.count_nonzero(~predicted & expected))
+    dice_denominator = 2 * true_positive + false_positive + false_negative
+    union = true_positive + false_positive + false_negative
+    predicted_count = true_positive + false_positive
+    truth_count = true_positive + false_negative
+    hd95: float | None = None
+    if predicted_count and truth_count:
+        structure = generate_binary_structure(3, 1)
+        predicted_surface = predicted ^ binary_erosion(predicted, structure=structure, border_value=0)
+        expected_surface = expected ^ binary_erosion(expected, structure=structure, border_value=0)
+        to_expected = distance_transform_edt(~expected_surface, sampling=spacing)[predicted_surface]
+        to_predicted = distance_transform_edt(~predicted_surface, sampling=spacing)[expected_surface]
+        hd95 = float(np.percentile(np.concatenate((to_expected, to_predicted)), 95))
+    return {
+        "status": "complete",
+        "scope": "single_user_supplied_reference",
+        "whole_lesion_dice": float(2 * true_positive / dice_denominator),
+        "whole_lesion_iou": float(true_positive / union),
+        "precision": float(true_positive / predicted_count) if predicted_count else 0.0,
+        "recall": float(true_positive / truth_count),
+        "hd95_mm": hd95,
+        "true_positive_voxels": true_positive,
+        "false_positive_voxels": false_positive,
+        "false_negative_voxels": false_negative,
+    }
 
 
 def validate_and_normalize(paths: list[Path]) -> tuple[np.ndarray, nib.Nifti1Image, dict[str, Any]]:
@@ -154,7 +224,10 @@ def validate_and_normalize(paths: list[Path]) -> tuple[np.ndarray, nib.Nifti1Ima
 
 
 def validate_study(directory: Path) -> dict[str, Any]:
-    _, _, validation = validate_and_normalize(input_paths(directory))
+    _, image, validation = validate_and_normalize(input_paths(directory))
+    reference = reference_path(directory)
+    if reference is not None:
+        _, validation["reference_mask"] = validate_reference(reference, image)
     return validation
 
 
@@ -174,6 +247,10 @@ def run_inference(args: argparse.Namespace) -> dict[str, Any]:
 
     paths = input_paths(args.input)
     image, reference, validation = validate_and_normalize(paths)
+    truth = None
+    reference_mask = reference_path(args.input)
+    if reference_mask is not None:
+        truth, validation["reference_mask"] = validate_reference(reference_mask, reference)
     checkpoint = args.checkpoint.resolve(strict=True)
     observed_checkpoint_sha256 = sha256(checkpoint)
     if args.expected_checkpoint_sha256 != EXPECTED_CHECKPOINT_SHA256:
@@ -221,40 +298,40 @@ def run_inference(args: argparse.Namespace) -> dict[str, Any]:
     if reloaded.get_data_dtype() != np.dtype(np.uint8) or not set(np.unique(np.asarray(reloaded.dataobj))).issubset({0, 1}):
         raise RuntimeError("Saved segmentation did not preserve the binary uint8 label contract")
 
-    result = ResearchSegmentationResultV1.model_validate(
-        {
-            "schema_version": "research-segmentation-result/v1",
-            "job_id": job_id,
-            "study_id": "glioma",
-            "protocol": "glioma_4seq_v1",
-            "disclaimer": DISCLAIMER,
-            "input_qc": validation,
-            "segmentation": {
-                "status": "complete",
-                "output_sha256": sha256(output),
-                "output_shape": list(segmentation.shape),
-                "geometry_preserved": True,
-                "labels": [0, 1],
-                "label_count": 2,
-                "nonzero_voxels": int(np.count_nonzero(segmentation)),
-            },
-            "provenance": {
-                "model_id": MODEL_ID,
-                "model_scope": "internal_research_only",
-                "checkpoint_sha256": observed_checkpoint_sha256,
-                "training_git_revision": TRAINING_GIT_REVISION,
-                "study_sha256": STUDY_SHA256,
-                "profile_sha256": PROFILE_SHA256,
-                "trainer_sha256": TRAINER_SHA256,
-                "inference_script_sha256": sha256(Path(__file__)),
-                "device": torch.cuda.get_device_name(0),
-                "torch_version": torch.__version__,
-                "monai_version": monai.__version__,
-                "nibabel_version": nib.__version__,
-                "generated_at": datetime.now(UTC).isoformat(),
-            },
-        }
-    )
+    result_data = {
+        "schema_version": "research-segmentation-result/v1",
+        "job_id": job_id,
+        "study_id": "glioma",
+        "protocol": "glioma_4seq_v1",
+        "disclaimer": DISCLAIMER,
+        "input_qc": validation,
+        "segmentation": {
+            "status": "complete",
+            "output_sha256": sha256(output),
+            "output_shape": list(segmentation.shape),
+            "geometry_preserved": True,
+            "labels": [0, 1],
+            "label_count": 2,
+            "nonzero_voxels": int(np.count_nonzero(segmentation)),
+        },
+        "evaluation": evaluation_metrics(segmentation, truth, tuple(validation["spacing_mm"])) if truth is not None else None,
+        "provenance": {
+            "model_id": MODEL_ID,
+            "model_scope": "internal_research_only",
+            "checkpoint_sha256": observed_checkpoint_sha256,
+            "training_git_revision": TRAINING_GIT_REVISION,
+            "study_sha256": STUDY_SHA256,
+            "profile_sha256": PROFILE_SHA256,
+            "trainer_sha256": TRAINER_SHA256,
+            "inference_script_sha256": sha256(Path(__file__)),
+            "device": torch.cuda.get_device_name(0),
+            "torch_version": torch.__version__,
+            "monai_version": monai.__version__,
+            "nibabel_version": nib.__version__,
+            "generated_at": datetime.now(UTC).isoformat(),
+        },
+    }
+    result = ResearchSegmentationResultV1.model_validate(result_data)
     result_payload = result.model_dump(mode="json")
     receipt = {
         "schema_version": "research-inference-receipt/v1",
@@ -262,6 +339,7 @@ def run_inference(args: argparse.Namespace) -> dict[str, Any]:
         "job_id": job_id,
         "input_qc": validation,
         "segmentation": result_payload["segmentation"],
+        "evaluation": result_payload["evaluation"],
         "model": result_payload["provenance"],
     }
     explanation = generate_result_explanation(

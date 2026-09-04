@@ -11,7 +11,8 @@ const capabilities = {
   inference: { status: "ready", modelId: "glioma-segresnet-20260828", modelScope: "internal_research_only", checkpointSha256: "1".repeat(64), observedCheckpointSha256: "1".repeat(64), outputKind: "binary_whole_lesion_research_segmentation", device: "NVIDIA GeForce RTX 4060" },
   explanation: { deterministic: "available", llm: "not_configured", model: null },
   demoAvailable: true,
-  limits: { files: 4, perFileBytes: 536870912, totalBytes: 2147483648, retentionHours: 24 }
+  evaluationDemoAvailable: true,
+  limits: { files: 5, perFileBytes: 536870912, totalBytes: 2147483648, retentionHours: 24 }
 };
 
 describe("new study workflow", () => {
@@ -32,11 +33,12 @@ describe("new study workflow", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(capabilities), { status: 200, headers: { "Content-Type": "application/json" } })));
     const { container } = render(<StudyView />);
     expect(await screen.findByText("Ready to run")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Try with sample scans" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Run accuracy sample" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Try pipeline sample" })).toBeEnabled();
     expect(container.querySelector("img, canvas, video")).toBeNull();
     const inputs = container.querySelectorAll<HTMLInputElement>('input[type="file"]');
-    expect(inputs).toHaveLength(4);
-    inputs.forEach((input, index) => fireEvent.change(input, { target: { files: [new File([`volume-${index}`], `volume-${index}.nii.gz`, { type: "application/gzip" })] } }));
+    expect(inputs).toHaveLength(5);
+    Array.from(inputs).slice(0, 4).forEach((input, index) => fireEvent.change(input, { target: { files: [new File([`volume-${index}`], `volume-${index}.nii.gz`, { type: "application/gzip" })] } }));
     expect(screen.getByRole("button", { name: "Check my files" })).toBeEnabled();
     expect(screen.getByText(/MiB selected/)).toBeInTheDocument();
   });
@@ -59,13 +61,34 @@ describe("new study workflow", () => {
     vi.stubGlobal("fetch", fetchMock);
     const { container } = render(<StudyView />);
     await screen.findByText("Ready to run");
-    container.querySelectorAll<HTMLInputElement>('input[type="file"]').forEach((input, index) => fireEvent.change(input, { target: { files: [new File([`v-${index}`], `v-${index}.nii.gz`, { type: "application/gzip" })] } }));
+    Array.from(container.querySelectorAll<HTMLInputElement>('input[type="file"]')).slice(0, 4).forEach((input, index) => fireEvent.change(input, { target: { files: [new File([`v-${index}`], `v-${index}.nii.gz`, { type: "application/gzip" })] } }));
     fireEvent.click(screen.getByRole("button", { name: "Check my files" }));
     expect(await screen.findByText("240 × 240 × 155 voxels")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Create outline" }));
     await waitFor(() => expect(screen.getByText("Research outline ready")).toBeInTheDocument(), { timeout: 3_000 });
     expect(screen.getByText("Showing the checked facts.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Download technical receipt" })).toBeInTheDocument();
+  });
+
+  it("runs a one-case accuracy test when an expert outline is supplied", async () => {
+    const validation = { schema_version: "research-study-validation/v1", status: "pass", modality_count: 4, modalities: ["t1", "t1ce", "t2", "flair"], geometry_match: true, shape: [8, 9, 10], spacing_mm: [1, 1, 1], geometry_sha256: "a".repeat(64), modality_sha256: { t1: "b".repeat(64), t1ce: "c".repeat(64), t2: "d".repeat(64), flair: "e".repeat(64) }, reference_mask: { status: "pass", geometry_match: true, sha256: "9".repeat(64), labels: [0, 1, 4], nonzero_voxels: 100 } };
+    const validated = { schemaVersion: "research-study-job/v1", jobId: "65ecf1c3-ae23-4c40-ae7f-6aecc9453904", state: "validated", createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z", expiresAt: "2026-09-02T00:00:00Z", validation, result: null, explanation: null, error: null, artifacts: [] };
+    const result = { schema_version: "research-segmentation-result/v1", disclaimer: "Research output only", input_qc: validation, segmentation: { status: "complete", output_sha256: "f".repeat(64), output_shape: [8, 9, 10], geometry_preserved: true, labels: [0, 1], label_count: 2, nonzero_voxels: 110 }, evaluation: { status: "complete", scope: "single_user_supplied_reference", whole_lesion_dice: 0.8123, whole_lesion_iou: 0.684, precision: 0.79, recall: 0.836, hd95_mm: 5.2, true_positive_voxels: 90, false_positive_voxels: 20, false_negative_voxels: 10 }, provenance: { model_id: "glioma-segresnet-20260828", checkpoint_sha256: "1".repeat(64) } };
+    const succeeded = { ...validated, state: "succeeded", result, explanation: { schema_version: "research-segmentation-explanation/v1", deterministic: { disclaimer: "Research output only", summary: "On this case, Dice was 0.8123.", evidence: [], limitations: "These scores describe one uploaded case only.", abstained: false }, llm: { status: "unavailable", artifact: null, reason: "not configured", model_name: null, model_digest: null } }, artifacts: ["segmentation", "receipt", "explanation"] };
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(capabilities), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(validated), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ...validated, state: "running" }), { status: 202 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(succeeded), { status: 200 })));
+    const { container } = render(<StudyView />);
+    await screen.findByText("Ready to run");
+    Array.from(container.querySelectorAll<HTMLInputElement>('input[type="file"]')).forEach((input, index) => fireEvent.change(input, { target: { files: [new File([`v-${index}`], `v-${index}.nii`, { type: "application/octet-stream" })] } }));
+    fireEvent.click(screen.getByRole("button", { name: "Check my files" }));
+    expect(await screen.findByRole("button", { name: "Run accuracy test" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Run accuracy test" }));
+    await waitFor(() => expect(screen.getByText("Accuracy test ready")).toBeInTheDocument(), { timeout: 3_000 });
+    expect(screen.getByText("0.812")).toBeInTheDocument();
+    expect(screen.getByText("This case only")).toBeInTheDocument();
   });
 });
 

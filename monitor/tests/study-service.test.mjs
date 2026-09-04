@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { mkdtemp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -37,11 +37,16 @@ async function call(service, method, url, { body, headers = {}, remoteAddress = 
   return { status: res.status, headers: res.headers, body: Buffer.concat(res.chunks), json: () => JSON.parse(Buffer.concat(res.chunks).toString()) };
 }
 
-function multipartStudy(boundary) {
+function multipartStudy(boundary, withReference = false) {
   const parts = [];
   for (const field of ["t1", "t1ce", "t2", "flair"]) {
     parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${field}"; filename="private-${field}.nii.gz"\r\nContent-Type: application/gzip\r\n\r\n`));
     parts.push(Buffer.from(`compressed-${field}`));
+    parts.push(Buffer.from("\r\n"));
+  }
+  if (withReference) {
+    parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="reference"; filename="expert-private-name.nii"\r\nContent-Type: application/octet-stream\r\n\r\n`));
+    parts.push(Buffer.from("reference-mask"));
     parts.push(Buffer.from("\r\n"));
   }
   parts.push(Buffer.from(`--${boundary}--\r\n`));
@@ -55,6 +60,8 @@ function fakeSpawn() {
     child.stderr = new PassThrough();
     child.kill = () => {};
     queueMicrotask(() => {
+      const input = args[1];
+      const hasReference = existsSync(join(input, "research_reference.nii")) || existsSync(join(input, "research_reference.nii.gz"));
       if (args.includes("--validate-only")) {
         child.stdout.end(JSON.stringify({
           schema_version: "research-study-validation/v1",
@@ -65,7 +72,8 @@ function fakeSpawn() {
           shape: [8, 9, 10],
           spacing_mm: [1, 1, 1],
           geometry_sha256: "a".repeat(64),
-          modality_sha256: { t1: "b".repeat(64), t1ce: "c".repeat(64), t2: "d".repeat(64), flair: "e".repeat(64) }
+          modality_sha256: { t1: "b".repeat(64), t1ce: "c".repeat(64), t2: "d".repeat(64), flair: "e".repeat(64) },
+          ...(hasReference ? { reference_mask: { status: "pass", geometry_match: true, sha256: "9".repeat(64), labels: [0, 1, 4], nonzero_voxels: 10 } } : {})
         }));
       } else {
         const output = args[2];
@@ -81,6 +89,7 @@ function fakeSpawn() {
           schema_version: "research-segmentation-result/v1",
           disclaimer: "Research only",
           segmentation: { nonzero_voxels: 12, output_sha256: "f".repeat(64), output_shape: [8, 9, 10], geometry_preserved: true, labels: [0, 1], label_count: 2, status: "complete" },
+          evaluation: hasReference ? { status: "complete", scope: "single_user_supplied_reference", whole_lesion_dice: 0.8, whole_lesion_iou: 0.667, precision: 0.75, recall: 0.86, hd95_mm: 2.1, true_positive_voxels: 6, false_positive_voxels: 2, false_negative_voxels: 1 } : null,
           provenance: { model_id: "glioma-segresnet-20260828", checkpoint_sha256: "0".repeat(64) }
         }));
       }
@@ -103,11 +112,12 @@ async function fixture({ bindHost, publicHosts, deviceProbe = async () => true }
   await mkdir(join(repoRoot, "runs"), { recursive: true });
   await mkdir(demoDirectory, { recursive: true });
   for (const modality of ["t1", "t1ce", "t2", "flair"]) await writeFile(join(demoDirectory, `sample_${modality}.nii`), modality);
+  await writeFile(join(demoDirectory, "sample_seg.nii"), "reference");
   await writeFile(python, "python");
   await writeFile(runner, "runner");
   await writeFile(checkpoint, "checkpoint");
   const expectedCheckpointSha256 = createHash("sha256").update("checkpoint").digest("hex");
-  const service = createStudyService({ repoRoot, runtimeRoot, python, runner, checkpoint, expectedCheckpointSha256, demoDirectory, spawnImpl: fakeSpawn(), deviceProbe, bindHost, publicHosts });
+  const service = createStudyService({ repoRoot, runtimeRoot, python, runner, checkpoint, expectedCheckpointSha256, demoDirectory, evaluationDemoDirectory: demoDirectory, spawnImpl: fakeSpawn(), deviceProbe, bindHost, publicHosts });
   await service.initialize();
   return { root, runtimeRoot, checkpoint, service };
 }
@@ -120,6 +130,7 @@ test("capabilities expose the exact ready checkpoint without a path", async () =
   assert.equal(value.inference.status, "ready");
   assert.equal(value.inference.checkpointSha256, service.constants.EXPECTED_CHECKPOINT_SHA256);
   assert.equal(value.demoAvailable, true);
+  assert.equal(value.evaluationDemoAvailable, true);
   assert.equal(JSON.stringify(value).includes("/runs/"), false);
 });
 
@@ -135,6 +146,18 @@ test("built-in demo creates a validated private study without an upload", async 
   assert.deepEqual((await readdir(join(runtimeRoot, job.jobId, "input"))).sort(), [
     "research_input_0000.nii", "research_input_0001.nii", "research_input_0002.nii", "research_input_0003.nii"
   ]);
+});
+
+test("built-in accuracy sample includes a private reference mask", async () => {
+  const { service, runtimeRoot } = await fixture();
+  const response = await call(service, "POST", "/api/studies/demo-evaluation", {
+    headers: { origin: "http://127.0.0.1:4173", "sec-fetch-site": "same-origin" }
+  });
+  assert.equal(response.status, 201, response.body.toString());
+  const job = response.json();
+  assert.equal(job.validation.reference_mask.nonzero_voxels, 10);
+  assert.equal(JSON.stringify(job).includes("sample_seg"), false);
+  assert.ok((await readdir(join(runtimeRoot, job.jobId, "input"))).includes("research_reference.nii"));
 });
 
 test("capabilities fail closed when CUDA is unavailable", async () => {
@@ -240,4 +263,32 @@ test("four-volume upload validates, runs once, downloads artifacts, and clears",
   assert.equal(cleared.status, 204);
   const missing = await call(service, "GET", `/api/studies/${validated.jobId}`);
   assert.equal(missing.status, 404);
+});
+
+test("optional reference mask is validated, evaluated, and deleted after processing", async () => {
+  const { service, runtimeRoot } = await fixture();
+  const boundary = "brain-research-evaluation";
+  const upload = await call(service, "POST", "/api/studies", {
+    headers: {
+      origin: "http://127.0.0.1:4173",
+      "sec-fetch-site": "same-origin",
+      "content-type": `multipart/form-data; boundary=${boundary}`
+    },
+    body: multipartStudy(boundary, true)
+  });
+  assert.equal(upload.status, 201, upload.body.toString());
+  const validated = upload.json();
+  assert.equal(validated.validation.reference_mask.nonzero_voxels, 10);
+  assert.equal(JSON.stringify(validated).includes("expert-private-name"), false);
+  assert.deepEqual((await readdir(join(runtimeRoot, validated.jobId, "input"))).sort(), [
+    "research_input_0000.nii.gz", "research_input_0001.nii.gz", "research_input_0002.nii.gz", "research_input_0003.nii.gz", "research_reference.nii"
+  ]);
+
+  await call(service, "POST", `/api/studies/${validated.jobId}/inference`, {
+    headers: { origin: "http://127.0.0.1:4173", "sec-fetch-site": "same-origin" }
+  });
+  await new Promise(resolve => setTimeout(resolve, 20));
+  const status = await call(service, "GET", `/api/studies/${validated.jobId}`);
+  assert.equal(status.json().result.evaluation.whole_lesion_dice, 0.8);
+  await assert.rejects(readFile(join(runtimeRoot, validated.jobId, "input", "research_reference.nii")));
 });

@@ -188,6 +188,15 @@ th:last-child, td:last-child { padding-right: 0; }
 .modality-description small { color: var(--muted); font-size: 0.7rem; }
 .file-action { min-width: 92px; border: 1px solid var(--rule-strong); border-radius: 8px; padding: 8px 10px; color: var(--muted); font-size: 0.72rem; font-weight: 650; text-align: center; transition: color 140ms var(--ease-out), border-color 140ms var(--ease-out); }
 .file-action--selected { color: var(--complete); border-color: color-mix(in srgb, var(--complete) 55%, var(--rule)); }
+.reference-upload { display: grid; gap: 10px; margin-top: 22px; padding: 18px 0 2px; border-top: 1px solid var(--rule-strong); }
+.reference-upload > div:first-child { display: grid; gap: 4px; }
+.reference-upload > div:first-child strong { font-size: 0.86rem; }
+.reference-upload > div:first-child strong span { color: var(--muted); font-weight: 520; }
+.reference-upload small { color: var(--muted); font-size: 0.7rem; line-height: 1.45; }
+.reference-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; min-height: 54px; padding: 0 12px; border: 1px solid var(--rule); border-radius: 8px; cursor: pointer; }
+.reference-row:hover .file-action { color: var(--active); border-color: var(--active); }
+.reference-row:focus-within { outline: 2px solid var(--active); outline-offset: 2px; }
+.reference-row input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .study-actions { display: flex; align-items: center; gap: 16px; padding-top: 14px; }
 .study-actions > span { color: var(--muted); font-size: 0.7rem; }
 .primary-action, .secondary-action, .text-action { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; border-radius: 8px; padding: 0 16px; font-size: 0.76rem; font-weight: 680; text-decoration: none; cursor: pointer; }
@@ -226,6 +235,14 @@ th:last-child, td:last-child { padding-right: 0; }
 .result-summary > span { display: block; margin-top: 7px; color: var(--muted); font-size: 0.75rem; }
 .result-summary > p { max-width: 68ch; margin: 26px 0 0; line-height: 1.6; }
 .result-summary .result-limitations { margin-top: 12px; color: var(--muted); font-size: 0.78rem; }
+.evaluation-block { border-top: 1px solid var(--rule-strong); }
+.evaluation-label { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.evaluation-label strong { color: var(--active); font-size: 0.78rem; }
+.evaluation-label span { color: var(--muted); font-size: 0.7rem; text-align: right; }
+.evaluation-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0; }
+.evaluation-metrics > div { padding: 16px 12px 14px 0; border-bottom: 1px solid var(--rule); }
+.evaluation-metrics dt { color: var(--muted); font-size: 0.66rem; font-weight: 680; letter-spacing: 0.05em; text-transform: uppercase; }
+.evaluation-metrics dd { margin: 5px 0 0; font-size: 1.15rem; font-weight: 680; font-variant-numeric: tabular-nums; }
 .llm-fallback, .llm-receipt { display: grid; gap: 4px; margin-top: 22px; padding: 14px 0; border-top: 1px solid var(--warning); font-size: 0.72rem; }
 .llm-fallback strong { color: var(--warning); }
 .llm-fallback span, .llm-receipt span { color: var(--muted); }
@@ -276,6 +293,7 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding-top: 
   .file-action { grid-column: 2; width: fit-content; min-width: 0; padding: 6px 9px; }
   .study-actions { align-items: flex-start; flex-direction: column; }
   .result-heading { align-items: flex-start; flex-direction: column; }
+  .evaluation-metrics { grid-template-columns: repeat(3, 1fr); }
   .artifact-actions { align-items: stretch; flex-direction: column; }
   .artifact-actions > * { width: 100%; }
 }
@@ -309,6 +327,9 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding-top: 
   .study-workspace .section-heading p { display: none; }
   .study-alert { gap: 8px; }
   .inline-recheck { width: fit-content; }
+  .evaluation-label { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .evaluation-label span { text-align: left; }
+  .evaluation-metrics { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (prefers-color-scheme: dark) {

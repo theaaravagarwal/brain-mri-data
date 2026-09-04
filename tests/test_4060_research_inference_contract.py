@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from importlib.util import find_spec
 from pathlib import Path
 
 import nibabel as nib
@@ -11,6 +12,7 @@ from brain_mri_data.language_contracts import StudyInputQcV1
 from scripts.run_4060_research_inference import (
     EXPECTED_CHECKPOINT_SHA256,
     MODALITY_SUFFIXES,
+    evaluation_metrics,
     input_paths,
     validate_study,
 )
@@ -45,6 +47,50 @@ class ResearchInferenceInputTests(unittest.TestCase):
             self.assertEqual(set(result["modality_sha256"]), {"t1", "t1ce", "t2", "flair"})
             self.assertNotIn("private-name", str(result))
 
+    def test_valid_reference_is_checked_without_exposing_its_name(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.write_study(root)
+            values = np.zeros((8, 9, 10), dtype=np.uint8)
+            values[2:5, 2:5, 2:5] = 4
+            nib.save(nib.Nifti1Image(values, np.eye(4)), root / "research_reference.nii.gz")
+            result = validate_study(root)
+            StudyInputQcV1.model_validate(result)
+            self.assertEqual(result["reference_mask"]["labels"], [0, 4])
+            self.assertEqual(result["reference_mask"]["nonzero_voxels"], 27)
+            self.assertNotIn("filename", str(result).lower())
+
+    def test_invalid_reference_geometry_labels_and_empty_mask_are_rejected(self) -> None:
+        cases = [
+            (np.ones((8, 9, 11), dtype=np.uint8), np.eye(4), "geometry"),
+            (np.full((8, 9, 10), 7, dtype=np.uint8), np.eye(4), "unsupported labels"),
+            (np.zeros((8, 9, 10), dtype=np.uint8), np.eye(4), "non-empty"),
+        ]
+        for values, affine, message in cases:
+            with self.subTest(message=message), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                self.write_study(root)
+                nib.save(nib.Nifti1Image(values, affine), root / "research_reference.nii")
+                with self.assertRaisesRegex(ValueError, message):
+                    validate_study(root)
+
+    @unittest.skipUnless(find_spec("scipy"), "SciPy is installed with the CUDA inference extra")
+    def test_evaluation_metrics_cover_match_offset_and_empty_prediction(self) -> None:
+        truth = np.zeros((5, 5, 5), dtype=bool)
+        truth[2, 2, 2] = True
+        identical = evaluation_metrics(truth, truth, (2.0, 1.0, 1.0))
+        self.assertEqual(identical["whole_lesion_dice"], 1.0)
+        self.assertEqual(identical["whole_lesion_iou"], 1.0)
+        self.assertEqual(identical["hd95_mm"], 0.0)
+        shifted = np.zeros_like(truth)
+        shifted[3, 2, 2] = True
+        offset = evaluation_metrics(shifted, truth, (2.0, 1.0, 1.0))
+        self.assertEqual(offset["whole_lesion_dice"], 0.0)
+        self.assertEqual(offset["hd95_mm"], 2.0)
+        empty = evaluation_metrics(np.zeros_like(truth), truth, (1.0, 1.0, 1.0))
+        self.assertEqual(empty["recall"], 0.0)
+        self.assertIsNone(empty["hd95_mm"])
+
     def test_geometry_mismatch_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -64,7 +110,7 @@ class ResearchInferenceInputTests(unittest.TestCase):
             root = Path(temporary)
             self.write_study(root)
             nib.save(nib.Nifti1Image(np.zeros((2, 2, 2)), np.eye(4)), root / "extra.nii.gz")
-            with self.assertRaisesRegex(ValueError, "exactly the four"):
+            with self.assertRaisesRegex(ValueError, "four scan volumes"):
                 input_paths(root)
 
     def test_checkpoint_digest_is_frozen(self) -> None:

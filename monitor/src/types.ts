@@ -136,7 +136,8 @@ export type StudyCapabilities = {
     model: string | null;
   };
   demoAvailable: boolean;
-  limits: { files: 4; perFileBytes: number; totalBytes: number; retentionHours: number };
+  evaluationDemoAvailable: boolean;
+  limits: { files: 5; perFileBytes: number; totalBytes: number; retentionHours: number };
 };
 
 export type StudyValidation = {
@@ -149,6 +150,13 @@ export type StudyValidation = {
   spacing_mm: [number, number, number];
   geometry_sha256: string;
   modality_sha256: Record<"t1" | "t1ce" | "t2" | "flair", string>;
+  reference_mask?: {
+    status: "pass";
+    geometry_match: true;
+    sha256: string;
+    labels: Array<0 | 1 | 2 | 3 | 4>;
+    nonzero_voxels: number;
+  } | null;
 };
 
 export type StudyExplanation = {
@@ -196,6 +204,18 @@ export type StudyJob = {
       label_count: 2;
       nonzero_voxels: number;
     };
+    evaluation?: {
+      status: "complete";
+      scope: "single_user_supplied_reference";
+      whole_lesion_dice: number;
+      whole_lesion_iou: number;
+      precision: number;
+      recall: number;
+      hd95_mm: number | null;
+      true_positive_voxels: number;
+      false_positive_voxels: number;
+      false_negative_voxels: number;
+    } | null;
     provenance: {
       model_id: string;
       model_scope: "internal_research_only";

@@ -35,6 +35,7 @@ function StatusMark({ state, label = state }: { state: "ready" | "waiting" | "co
 export default function StudyView() {
   const [capabilities, setCapabilities] = useState<StudyCapabilities | null>(null);
   const [files, setFiles] = useState<Files>(emptyFiles);
+  const [reference, setReference] = useState<File | null>(null);
   const [job, setJob] = useState<StudyJob | null>(null);
   const [busy, setBusy] = useState<"demo" | "upload" | "run" | "clear" | null>(null);
   const [usingDemo, setUsingDemo] = useState(false);
@@ -73,7 +74,7 @@ export default function StudyView() {
   }, [job]);
 
   const allSelected = useMemo(() => modalityDetails.every(({ key }) => files[key]), [files]);
-  const totalBytes = useMemo(() => modalityDetails.reduce((total, { key }) => total + (files[key]?.size || 0), 0), [files]);
+  const totalBytes = useMemo(() => modalityDetails.reduce((total, { key }) => total + (files[key]?.size || 0), reference?.size || 0), [files, reference]);
   const modelReady = capabilities?.inference.status === "ready";
 
   const selectFile = (modality: Modality, file: File | null) => {
@@ -83,13 +84,14 @@ export default function StudyView() {
     setError(null);
   };
 
-  const loadDemo = async () => {
+  const loadDemo = async (evaluation = false) => {
     setBusy("demo");
     setError(null);
     try {
-      const response = await fetch("/api/studies/demo", { method: "POST" });
+      const response = await fetch(evaluation ? "/api/studies/demo-evaluation" : "/api/studies/demo", { method: "POST" });
       setJob(await jsonResponse<StudyJob>(response));
       setFiles(emptyFiles());
+      setReference(null);
       setUsingDemo(true);
     } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
     finally { setBusy(null); }
@@ -97,11 +99,12 @@ export default function StudyView() {
 
   const validateStudy = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!allSelected) return setError("Select one .nii.gz volume for every modality.");
+    if (!allSelected) return setError("Choose one NIfTI file for every scan type.");
     setBusy("upload");
     setError(null);
     const body = new FormData();
     for (const { key } of modalityDetails) body.append(key, files[key]!);
+    if (reference) body.append("reference", reference);
     try {
       const response = await fetch("/api/studies", { method: "POST", body });
       setJob(await jsonResponse<StudyJob>(response));
@@ -130,6 +133,7 @@ export default function StudyView() {
       }
       setJob(null);
       setFiles(emptyFiles());
+      setReference(null);
       setUsingDemo(false);
     } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
     finally { setBusy(null); }
@@ -137,12 +141,13 @@ export default function StudyView() {
 
   const llm = job?.explanation?.llm;
   const shownExplanation = llm?.status === "validated" && llm.artifact ? llm.artifact : job?.explanation?.deterministic;
+  const evaluation = job?.result?.evaluation;
 
   return <div className="view study-view" id="view-study">
     <div className="study-intro">
       <div>
         <h1>Try the MRI outline tool</h1>
-        <p>Use our sample or choose four scan files. The app checks them, runs the model, and gives you an outline to download.</p>
+        <p>Choose four scan files to create an outline. Add an expert outline to measure accuracy on one case.</p>
       </div>
       <div className="model-readiness" aria-live="polite">
         <StatusMark state={!capabilities && error ? "failed" : !capabilities ? "waiting" : modelReady ? "ready" : "failed"} label={!capabilities ? "checking" : modelReady ? "ready" : "not ready"} />
@@ -163,19 +168,29 @@ export default function StudyView() {
 
     <div className="study-workspace">
       <form className="modality-form" onSubmit={validateStudy}>
-        <div className="section-heading"><div><h2>{usingDemo ? "Sample scans" : "Choose four scan files"}</h2><p>{usingDemo ? "The sample passed the file check." : "Files stay private and are deleted after processing."}</p></div><span className="file-total">{usingDemo ? "Ready" : allSelected ? `${formatBytes(totalBytes)} selected` : `${Object.values(files).filter(Boolean).length}/4 selected`}</span></div>
-        {usingDemo ? <div className="demo-ready"><strong>Built-in sample loaded</strong><span>You can create the outline now, or clear it and use your own files.</span></div> : <div className="modality-list">
+        <div className="section-heading"><div><h2>{usingDemo ? job?.validation?.reference_mask ? "Accuracy sample" : "Sample scans" : "Choose four scan files"}</h2><p>{usingDemo ? job?.validation?.reference_mask ? "A labeled development-validation case is ready." : "This checks the workflow, not accuracy." : "Files stay private and are deleted after processing."}</p></div><span className="file-total">{usingDemo ? "Ready" : allSelected ? `${formatBytes(totalBytes)} selected` : `${Object.values(files).filter(Boolean).length}/4 scans`}</span></div>
+        {usingDemo ? <div className="demo-ready"><strong>{job?.validation?.reference_mask ? "Labeled sample loaded" : "Built-in sample loaded"}</strong><span>{job?.validation?.reference_mask ? "The model did not train on this case. Run it to see one-case accuracy." : "You can create the outline now, or clear it and use your own files."}</span></div> : <div className="modality-list">
           {modalityDetails.map(({ key, label, detail }) => <label className="modality-row" key={key}>
             <span className="modality-code">{label}</span>
             <span className="modality-description"><strong>{files[key]?.name || detail}</strong>{files[key] ? <small>{formatBytes(files[key]!.size)} · ready</small> : null}</span>
             <span className={`file-action ${files[key] ? "file-action--selected" : ""}`}>{files[key] ? "Replace" : "Choose file"}</span>
-            <input type="file" accept=".nii.gz,application/gzip,application/x-gzip" onChange={event => selectFile(key, event.target.files?.[0] || null)} disabled={busy !== null || job?.state === "running"} />
+            <input type="file" accept=".nii,.nii.gz,application/gzip,application/x-gzip,application/x-nifti" onChange={event => selectFile(key, event.target.files?.[0] || null)} disabled={busy !== null || job?.state === "running"} />
           </label>)}
+          <div className="reference-upload">
+            <div><strong>Test accuracy <span>(optional)</span></strong><small>Add the expert outline for this same case.</small></div>
+            <label className="reference-row">
+              <span className="modality-description"><strong>{reference?.name || "Reference outline"}</strong>{reference ? <small>{formatBytes(reference.size)} · ready</small> : null}</span>
+              <span className={`file-action ${reference ? "file-action--selected" : ""}`}>{reference ? "Replace" : "Choose file"}</span>
+              <input type="file" accept=".nii,.nii.gz,application/gzip,application/x-gzip,application/x-nifti" onChange={event => { setReference(event.target.files?.[0] || null); setJob(null); setError(null); }} disabled={busy !== null || job?.state === "running"} />
+            </label>
+            <small>The app compares the model with this outline. The LLM never sees scan or mask pixels.</small>
+          </div>
         </div>}
         <div className="study-actions">
-          {!usingDemo && !allSelected && capabilities?.demoAvailable ? <button className="primary-action" type="button" disabled={!modelReady || busy !== null} onClick={loadDemo}>{busy === "demo" ? "Loading sample…" : "Try with sample scans"}</button> : null}
+          {!usingDemo && !allSelected && capabilities?.evaluationDemoAvailable ? <button className="primary-action" type="button" disabled={!modelReady || busy !== null} onClick={() => loadDemo(true)}>{busy === "demo" ? "Loading sample…" : "Run accuracy sample"}</button> : null}
+          {!usingDemo && !allSelected && capabilities?.demoAvailable ? <button className="secondary-action" type="button" disabled={!modelReady || busy !== null} onClick={() => loadDemo(false)}>Try pipeline sample</button> : null}
           {!usingDemo && Object.values(files).some(Boolean) ? <button className="primary-action" type="submit" disabled={!allSelected || !modelReady || busy !== null || job?.state === "running"}>{busy === "upload" ? "Checking files…" : "Check my files"}</button> : null}
-          <span>{usingDemo ? "Public, de-identified research sample" : "Or choose your own files above"}</span>
+          {usingDemo && job?.state !== "running" ? <button className="text-action" type="button" onClick={clearStudy} disabled={busy !== null}>Choose my own files</button> : <span>{usingDemo ? "Public, de-identified research sample" : "Or choose your own files above"}</span>}
         </div>
       </form>
 
@@ -185,20 +200,29 @@ export default function StudyView() {
           <div><dt>Files</dt><dd>T1 · T1ce · T2 · FLAIR</dd></div>
           <div><dt>Scan size</dt><dd>{job.validation.shape.join(" × ")} voxels</dd></div>
           <div><dt>Voxel size</dt><dd>{job.validation.spacing_mm.map(value => value.toFixed(2)).join(" × ")} mm</dd></div>
+          {job.validation.reference_mask ? <div><dt>Reference outline</dt><dd>Ready · {job.validation.reference_mask.nonzero_voxels.toLocaleString()} marked voxels</dd></div> : null}
           <div><dt>Check ID</dt><dd title={job.validation.geometry_sha256}>{shortHash(job.validation.geometry_sha256)}</dd></div>
         </dl> : <div className="ledger-empty"><strong>Nothing to check yet</strong><span>Use the sample or choose four files.</span></div>}
-        {job?.state === "validated" ? <button className="primary-action primary-action--full" type="button" disabled={!modelReady || busy !== null} onClick={runInference}>{busy === "run" ? "Starting…" : "Create outline"}</button> : null}
-        {job?.state === "running" ? <div className="inference-running" aria-live="polite"><span className="activity-line" /><strong>Creating the outline</strong><span>This can take a few minutes. You can leave this page open.</span></div> : null}
+        {job?.state === "validated" ? <button className="primary-action primary-action--full" type="button" disabled={!modelReady || busy !== null} onClick={runInference}>{busy === "run" ? "Starting…" : job.validation?.reference_mask ? "Run accuracy test" : "Create outline"}</button> : null}
+        {job?.state === "running" ? <div className="inference-running" aria-live="polite"><span className="activity-line" /><strong>{job.validation?.reference_mask ? "Testing this case" : "Creating the outline"}</strong><span>This can take a few minutes. You can leave this page open.</span></div> : null}
         {job?.state === "failed" ? <div className="ledger-failure"><strong>Processing failed</strong><span>{job.error || "The model did not produce an outline."}</span></div> : null}
       </aside>
     </div>
 
     {job?.state === "succeeded" && job.result && shownExplanation ? <section className="study-result" aria-labelledby="result-title">
-      <div className="result-heading"><div><h2 id="result-title">Research outline ready</h2><p role="note">For research only—not a medical result.</p></div><StatusMark state="complete" /></div>
+      <div className="result-heading"><div><h2 id="result-title">{evaluation ? "Accuracy test ready" : "Research outline ready"}</h2><p role="note">For research only—not a medical result.</p></div><StatusMark state="complete" /></div>
       <div className="result-grid">
         <div className="result-summary">
-          <strong>{job.result.segmentation.nonzero_voxels.toLocaleString()}</strong>
-          <span>voxels included in the outline</span>
+          {evaluation ? <div className="evaluation-block">
+            <div className="evaluation-label"><strong>This case only</strong><span>Compared with the expert outline you uploaded</span></div>
+            <dl className="evaluation-metrics">
+              <div><dt>Dice</dt><dd>{evaluation.whole_lesion_dice.toFixed(3)}</dd></div>
+              <div><dt>IoU</dt><dd>{evaluation.whole_lesion_iou.toFixed(3)}</dd></div>
+              <div><dt>Precision</dt><dd>{evaluation.precision.toFixed(3)}</dd></div>
+              <div><dt>Recall</dt><dd>{evaluation.recall.toFixed(3)}</dd></div>
+              <div><dt>HD95</dt><dd>{evaluation.hd95_mm === null ? "N/A" : `${evaluation.hd95_mm.toFixed(1)} mm`}</dd></div>
+            </dl>
+          </div> : <><strong>{job.result.segmentation.nonzero_voxels.toLocaleString()}</strong><span>voxels included in the outline</span></>}
           <p>{shownExplanation.summary}</p>
           <p className="result-limitations">{shownExplanation.limitations}</p>
           {llm?.status !== "validated" ? <div className="llm-fallback"><strong>Showing the checked facts.</strong><span>The optional plain-language rewrite was not available.</span></div> : <div className="llm-receipt"><strong>Plain-language explanation checked</strong><span>{llm.model_name} · <span title={llm.model_digest || undefined}>{shortHash(llm.model_digest)}</span></span></div>}
