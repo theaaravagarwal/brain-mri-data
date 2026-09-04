@@ -34,6 +34,9 @@ class FixedExternalEvaluationTests(unittest.TestCase):
         self.assertNotIn("case_001", encoded)
         self.assertEqual(result["case_count"], 2)
         self.assertEqual(result["failures"]["empty_prediction_count"], 1)
+        self.assertEqual(result["failures"]["descriptive_dice_bands"], {
+            "at_least_0_90": 1, "0_75_to_0_90": 1, "0_50_to_0_75": 0, "below_0_50": 0,
+        })
         self.assertAlmostEqual(result["metrics"]["whole_lesion_dice"]["mean"], 0.85)
 
 

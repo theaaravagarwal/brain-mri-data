@@ -4,6 +4,12 @@
   "expected_case_count": 60,
   "failures": {
     "case_error_count": 0,
+    "descriptive_dice_bands": {
+      "0_50_to_0_75": 5,
+      "0_75_to_0_90": 19,
+      "at_least_0_90": 35,
+      "below_0_50": 1
+    },
     "empty_prediction_count": 1,
     "hd95_unavailable_count": 1
   },
@@ -110,7 +116,8 @@
     "checkpoint_sha256": "121422a861bbe7affaa5e161058e69eea737b2390651c3c03ea20256969e99e5",
     "dataset_source_id": "brats2023_ssa_hf",
     "dataset_source_revision": "76608935145af0fb74a74b68f041471aa494f0f6",
-    "generated_at": "2026-09-04T17:57:38.425822+00:00",
+    "evaluator_sha256": "42cb6e4c62fd430c56b329cde7bec98482207ad23759bb933396047d4fa99eaf",
+    "generated_at": "2026-09-04T18:00:48.875355+00:00",
     "model_id": "glioma-segresnet-20260828",
     "plan_sha256": "5f8e5a9009ba81e71156dd2cc535d1446fe0d6aba8c09bb996fe59b01ce43d63"
   },

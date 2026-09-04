@@ -121,6 +121,7 @@ def aggregate(rows: list[dict[str, Any]], plan: dict[str, Any], elapsed_seconds:
             int(aggregation["bootstrap_replicates"]),
         )
     latencies = [float(row["inference_seconds"]) for row in rows]
+    dice_values = [float(row["metrics"]["whole_lesion_dice"]) for row in rows]
     return {
         "schema_version": "fixed-segresnet-external-summary/v1",
         "benchmark_id": plan["benchmark_id"],
@@ -134,6 +135,12 @@ def aggregate(rows: list[dict[str, Any]], plan: dict[str, Any], elapsed_seconds:
             "empty_prediction_count": sum(row["predicted_voxels"] == 0 for row in rows),
             "hd95_unavailable_count": sum(row["metrics"]["hd95_mm"] is None for row in rows),
             "case_error_count": 0,
+            "descriptive_dice_bands": {
+                "at_least_0_90": sum(value >= 0.90 for value in dice_values),
+                "0_75_to_0_90": sum(0.75 <= value < 0.90 for value in dice_values),
+                "0_50_to_0_75": sum(0.50 <= value < 0.75 for value in dice_values),
+                "below_0_50": sum(value < 0.50 for value in dice_values),
+            },
         },
         "latency_seconds": percentile_summary(latencies),
         "total_elapsed_seconds": elapsed_seconds,
@@ -141,6 +148,7 @@ def aggregate(rows: list[dict[str, Any]], plan: dict[str, Any], elapsed_seconds:
             "model_id": MODEL_ID,
             "checkpoint_sha256": EXPECTED_CHECKPOINT_SHA256,
             "plan_sha256": canonical_sha256(plan),
+            "evaluator_sha256": sha256(Path(__file__)),
             "dataset_source_id": plan["dataset"]["source_id"],
             "dataset_source_revision": plan["dataset"]["source_revision"],
             "generated_at": utc_now(),
@@ -178,6 +186,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             raise ValueError("Existing results use a different benchmark plan")
         rows = saved.get("cases", [])
     completed = {row["case_token"] for row in rows}
+    initial_completed = len(rows)
     started = time.monotonic()
 
     device = torch.device("cuda:0")
@@ -214,6 +223,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "inference_seconds": time.monotonic() - case_started,
         }
         rows.append(row)
+        completed.add(case_token)
         rows.sort(key=lambda item: item["case_token"])
         atomic_json(private_path, {
             "schema_version": "fixed-segresnet-external-private-results/v1",
@@ -221,8 +231,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "cases": rows,
         })
         elapsed = time.monotonic() - started
-        new_cases = max(1, len([row for row in rows if row["case_token"] in {case[0] for case in selected}]))
-        remaining = max(0, len(selected) - len(rows))
+        new_cases = max(1, len(rows) - initial_completed)
+        remaining = max(0, len(selected) - len(completed))
         atomic_json(public_status_path, {
             "schema_version": "fixed-segresnet-external-status/v1",
             "benchmark_id": plan["benchmark_id"],
