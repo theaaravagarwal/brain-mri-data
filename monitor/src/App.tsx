@@ -28,12 +28,12 @@ const metrics: Record<MetricKey, { label: string; unit: string; color: string; d
 
 type ViewKey = "study" | "operations" | "evidence" | "explanations" | "proposals";
 
-const views: ReadonlyArray<{ key: ViewKey; label: string; detail: string }> = [
-  { key: "study", label: "New study", detail: "Validate and segment" },
-  { key: "operations", label: "Operations", detail: "Workers and queues" },
-  { key: "evidence", label: "Model evidence", detail: "Runs and gates" },
-  { key: "explanations", label: "Explanations", detail: "Deterministic and LLM" },
-  { key: "proposals", label: "Proposals", detail: "Human review only" }
+const views: ReadonlyArray<{ key: ViewKey; label: string }> = [
+  { key: "study", label: "New study" },
+  { key: "operations", label: "Operations" },
+  { key: "evidence", label: "Model evidence" },
+  { key: "explanations", label: "Explanations" },
+  { key: "proposals", label: "Proposals" }
 ];
 
 function viewFromHash(): ViewKey {
@@ -397,12 +397,12 @@ export function App() {
   return <div className="shell">
     <a className="skip-link" href="#main-content">Skip to current view</a>
     <header className="masthead">
-      <div className="product-identity"><strong>Brain MRI research workspace</strong><span>Four-volume validation · fixed local CNN · exact provenance</span></div>
-      <div className="network-summary"><strong>{snapshot ? `${reporting}/2 workers reporting` : "Gateway not yet confirmed"}</strong><span>{snapshot ? `Snapshot ${formatAge(snapshot.generatedAt, now)}` : "Waiting for local data"}</span></div>
+      <div className="product-identity"><strong>Brain MRI workspace</strong></div>
+      <div className="network-summary"><strong>{snapshot ? `${reporting}/2 workers online` : "Checking workers"}</strong></div>
     </header>
-    <div className="prototype-notice" role="note"><strong>Internal research prototype.</strong><span>Not for diagnosis, treatment, or clinical use.</span></div>
+    <div className="prototype-notice" role="note"><strong>Research use only</strong><span>Not for diagnosis or treatment.</span></div>
     <nav className="view-nav" aria-label="Research workspace">
-      <div className="view-nav__links">{views.map(view => <a key={view.key} href={`#${view.key}`} aria-current={activeView === view.key ? "page" : undefined}><strong>{view.label}</strong><span>{view.detail}</span></a>)}</div>
+      <div className="view-nav__links">{views.map(view => <a key={view.key} href={`#${view.key}`} aria-current={activeView === view.key ? "page" : undefined}>{view.label}</a>)}</div>
       <label className="view-nav__select"><span>Current view</span><select value={activeView} onChange={event => { window.location.hash = event.target.value; }}>{views.map(view => <option key={view.key} value={view.key}>{view.label}</option>)}</select></label>
     </nav>
     {error ? <div className="gateway-banner" role="status"><strong>Local gateway update failed.</strong><span>{snapshot ? "Last-known values remain visible." : "No cached snapshot is available."} {error}</span></div> : null}

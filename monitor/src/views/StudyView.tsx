@@ -126,21 +126,21 @@ export default function StudyView() {
   return <div className="view study-view" id="view-study">
     <div className="study-intro">
       <div>
-        <h1>Segment one four-volume MRI study</h1>
-        <p>Select T1, T1ce, T2, and FLAIR NIfTI volumes. The fixed CNN validates and runs on the private NVIDIA worker; image data never reaches the language model.</p>
+        <h1>New MRI study</h1>
+        <p>Add one T1, T1ce, T2, and FLAIR volume. Files stay on this private worker; the LLM receives metadata only.</p>
       </div>
       <div className="model-readiness" aria-live="polite">
         <StatusMark state={!capabilities && error ? "failed" : !capabilities ? "waiting" : modelReady ? "ready" : "failed"} label={!capabilities && error ? "gateway unavailable" : !capabilities ? "checking inference" : modelReady ? "inference ready" : "inference unavailable"} />
         <strong>{capabilities?.inference.modelId || (error ? "Capability check failed" : "Checking fixed model")}</strong>
-        <span>{capabilities ? `${capabilities.inference.device} · ${capabilities.inference.outputKind.replaceAll("_", " ")}` : "Confirming the local checkpoint"}</span>
+        <span>{capabilities ? capabilities.inference.device : "Confirming the local checkpoint"}</span>
       </div>
     </div>
 
     <ol className="study-steps" aria-label="Study workflow progress">
-      <li aria-current={!job ? "step" : undefined}><span>1</span><strong>Select</strong><small>Four NIfTI volumes</small></li>
-      <li aria-current={job?.state === "validated" ? "step" : undefined}><span>2</span><strong>Validate</strong><small>Modalities and geometry</small></li>
-      <li aria-current={job?.state === "running" ? "step" : undefined}><span>3</span><strong>Run</strong><small>Fixed local CNN</small></li>
-      <li aria-current={job?.state === "succeeded" ? "step" : undefined}><span>4</span><strong>Return</strong><small>Mask, receipt, explanation</small></li>
+      <li aria-current={!job ? "step" : undefined}><span>1</span><strong>Select files</strong></li>
+      <li aria-current={job?.state === "validated" ? "step" : undefined}><span>2</span><strong>Validate</strong></li>
+      <li aria-current={job?.state === "running" ? "step" : undefined}><span>3</span><strong>Run CNN</strong></li>
+      <li aria-current={job?.state === "succeeded" ? "step" : undefined}><span>4</span><strong>Download</strong></li>
     </ol>
 
     {error ? <div className="study-alert" role="alert"><strong>The study could not continue.</strong><span>{error}</span>{!capabilities ? <button className="inline-recheck" type="button" disabled={checkingCapabilities} onClick={() => { void checkCapabilities().request; }}>{checkingCapabilities ? "Checking fixed model…" : "Retry capability check"}</button> : null}</div> : null}
@@ -148,29 +148,29 @@ export default function StudyView() {
 
     <div className="study-workspace">
       <form className="modality-form" onSubmit={validateStudy}>
-        <div className="section-heading"><div><h2>Study volumes</h2><p>Files are renamed to server-generated research identifiers and removed after processing.</p></div><span className="file-total">{allSelected ? `${formatBytes(totalBytes)} selected` : `${Object.values(files).filter(Boolean).length}/4 selected`}</span></div>
+        <div className="section-heading"><div><h2>Choose four .nii.gz volumes</h2><p>One file per sequence. Files are private and deleted after processing.</p></div><span className="file-total">{allSelected ? `${formatBytes(totalBytes)} selected` : `${Object.values(files).filter(Boolean).length}/4 selected`}</span></div>
         <div className="modality-list">
           {modalityDetails.map(({ key, label, detail }) => <label className="modality-row" key={key}>
             <span className="modality-code">{label}</span>
-            <span className="modality-description"><strong>{files[key]?.name || detail}</strong><small>{files[key] ? `${formatBytes(files[key]!.size)} · ready to validate` : "Compressed NIfTI (.nii.gz)"}</small></span>
+            <span className="modality-description"><strong>{files[key]?.name || detail}</strong>{files[key] ? <small>{formatBytes(files[key]!.size)} · ready</small> : null}</span>
             <span className={`file-action ${files[key] ? "file-action--selected" : ""}`}>{files[key] ? "Replace" : "Choose file"}</span>
             <input type="file" accept=".nii.gz,application/gzip,application/x-gzip" onChange={event => selectFile(key, event.target.files?.[0] || null)} disabled={busy !== null || job?.state === "running"} />
           </label>)}
         </div>
         <div className="study-actions">
           <button className="primary-action" type="submit" disabled={!allSelected || !modelReady || busy !== null || job?.state === "running"}>{busy === "upload" ? "Validating study…" : job?.validation ? "Validate again" : "Validate study"}</button>
-          <span>Maximum 512 MiB per volume · uploads remain on this private worker</span>
+          <span>512 MiB maximum per file · processed locally</span>
         </div>
       </form>
 
       <aside className="validation-ledger" aria-labelledby="validation-title">
-        <div className="section-heading"><div><h2 id="validation-title">Validation ledger</h2><p>Only contract facts are shown.</p></div>{job?.validation ? <StatusMark state="complete" /> : <StatusMark state="waiting" />}</div>
+        <div className="section-heading"><div><h2 id="validation-title">Validation</h2></div>{job?.validation ? <StatusMark state="complete" /> : <StatusMark state="waiting" />}</div>
         {job?.validation ? <dl>
           <div><dt>Modalities</dt><dd>T1 · T1ce · T2 · FLAIR</dd></div>
           <div><dt>Geometry</dt><dd>{job.validation.shape.join(" × ")} voxels</dd></div>
           <div><dt>Spacing</dt><dd>{job.validation.spacing_mm.map(value => value.toFixed(2)).join(" × ")} mm</dd></div>
           <div><dt>Geometry receipt</dt><dd title={job.validation.geometry_sha256}>{shortHash(job.validation.geometry_sha256)}</dd></div>
-        </dl> : <div className="ledger-empty"><strong>No validated study yet.</strong><span>Select all four volumes and run validation. The CNN cannot start before this ledger passes.</span></div>}
+        </dl> : <div className="ledger-empty"><strong>Waiting for four volumes</strong><span>Geometry must pass before the CNN can run.</span></div>}
         {job?.state === "validated" ? <button className="primary-action primary-action--full" type="button" disabled={!modelReady || busy !== null} onClick={runInference}>{busy === "run" ? "Starting inference…" : "Run fixed CNN"}</button> : null}
         {job?.state === "running" ? <div className="inference-running" aria-live="polite"><span className="activity-line" /><strong>Local inference is running</strong><span>Closing this page does not cancel the job. The gateway stops it after 30 minutes if it does not finish; no unsafe browser cancel control is exposed.</span></div> : null}
         {job?.state === "failed" ? <div className="ledger-failure"><strong>Inference failed</strong><span>{job.error || "The fixed runner did not produce a valid result."}</span></div> : null}
