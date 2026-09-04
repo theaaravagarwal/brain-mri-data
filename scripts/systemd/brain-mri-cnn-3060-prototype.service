@@ -6,7 +6,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=%h/Documents/brain-mri-data
-ExecStart=%h/Documents/brain-mri-data/scripts/run_durable_cuda_queue.sh prototype-cnn-rtx3060-prototype data/manifests/glioma.pilot.full.v3.batch4.json training/profiles/cuda-batch4.yaml 30 brats:20260910 brats:20260911
+Environment=TRAINING_CACHE=data/cache/glioma-pilot-full-repaired--chunk20-v1/cache.json
+ExecStart=%h/Documents/brain-mri-data/scripts/run_durable_cuda_queue.sh prototype-cnn-rtx3060-cached data/manifests/glioma.pilot.full.v3.batch4.json training/profiles/cuda-batch4.yaml 30 brats:20260910 brats:20260911
 RuntimeMaxSec=16h
 Nice=10
 UMask=0077

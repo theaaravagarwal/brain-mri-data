@@ -23,6 +23,14 @@ if [[ ! -f "$study" || ! -f "$profile" || ! -x .venv/bin/python ]]; then
   echo "queue prerequisites are unavailable" >&2
   exit 66
 fi
+training_cache_args=()
+if [[ -n "${TRAINING_CACHE:-}" ]]; then
+  if [[ "$TRAINING_CACHE" = /* || "$TRAINING_CACHE" == *".."* || ! -f "$TRAINING_CACHE" ]]; then
+    echo "TRAINING_CACHE must be an existing repository-relative manifest" >&2
+    exit 66
+  fi
+  training_cache_args=(--training-cache "$TRAINING_CACHE")
+fi
 
 jobs=("$@")
 runs=()
@@ -114,7 +122,8 @@ for index in "${!jobs[@]}"; do
   write_status running "$run"
   if ! .venv/bin/python training/train_glioma.py \
       --study "$study" --data-root data --profile "$profile" \
-      --arm "$arm" --seed "$seed" --epochs "$epochs" --output "$run"; then
+      --arm "$arm" --seed "$seed" --epochs "$epochs" --output "$run" \
+      "${training_cache_args[@]}"; then
     echo "$(date -Is) failed and preserved: ${run}"
     failures=$((failures + 1))
     write_status attention "" "preserved_failure"
