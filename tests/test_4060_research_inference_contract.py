@@ -20,6 +20,7 @@ from scripts.run_4060_research_inference import (
 
 
 class ResearchInferenceInputTests(unittest.TestCase):
+    @unittest.skipUnless(find_spec("scipy"), "Viewing copies require the CUDA/scipy dependency set")
     def test_viewing_copies_preserve_geometry_and_remove_text(self):
         import json
         with tempfile.TemporaryDirectory() as directory:
