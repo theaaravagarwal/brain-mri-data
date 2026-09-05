@@ -66,7 +66,7 @@ export default function MriViewer({ id, viewing }: { id: string; viewing: Viewin
       setLoading(false);
     };
     void load().catch(reason => { if (!disposed) { setError(`Viewer could not load: ${reason.message}. Downloads remain available.`); setLoading(false); } });
-    return () => { disposed = true; controller.abort(); if (nv.volumes[0]) savedContrast.current = { modality, min: nv.volumes[0].cal_min, max: nv.volumes[0].cal_max }; urls.forEach(url => URL.revokeObjectURL(url)); nv.cleanup(); other?.cleanup(); peer.current = null; };
+    return () => { disposed = true; controller.abort(); if (typeof nv.volumes[0]?.cal_min === "number" && typeof nv.volumes[0]?.cal_max === "number") savedContrast.current = { modality, min: nv.volumes[0].cal_min, max: nv.volumes[0].cal_max }; urls.forEach(url => URL.revokeObjectURL(url)); nv.cleanup(); other?.cleanup(); peer.current = null; };
   }, [id, modality, mask]);
   return <section className="mri-viewer" aria-label="MRI outline viewer">
     <div className="viewer-controls">
