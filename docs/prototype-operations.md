@@ -95,3 +95,6 @@ Further independent case testing and expert review remain useful. Retraining is
 an optional future project, requiring a development-only experiment and a new
 untouched cohort. Keep all training off unless a new experiment is explicitly
 authorized. Never restart `.3` training as an operational recovery step.
+
+The [independent-validation readiness record and review worksheet](independent-validation-review.md)
+document the current data limitation and the inputs needed for the next evaluation.
