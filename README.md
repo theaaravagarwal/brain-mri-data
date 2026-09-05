@@ -11,6 +11,10 @@ See [the prototype operating guide](docs/prototype-operations.md) for acceptance
 checks, model identity, service recovery, and the definition of completion.
 The dataset and historical research workflows below remain available separately.
 
+For project documentation, start with the [research synopsis](docs/project-synopsis.md),
+[model card](docs/research-model-card.md), and [evaluation protocol](docs/research-evaluation-protocol.md).
+These link recorded results to their evidence and identify the studies still needed.
+
 This project creates provenance-preserving manifests for four-sequence brain MRI
 tumour datasets. It is designed for a **multi-module 3D protocol**: every
 evaluated case requires T1, T1ce/T1c, T2, and FLAIR/T2f, plus a voxel mask.
