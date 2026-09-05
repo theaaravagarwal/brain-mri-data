@@ -19,6 +19,18 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
+.mri-viewer { margin: 24px 0; }
+.viewer-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.viewer-controls label { display: flex; align-items: center; gap: 8px; }
+.viewer-controls select, .viewer-controls button { padding: 8px; }
+.viewer-canvas { position: relative; height: min(65vh, 640px); background: #111; }
+.viewer-canvas canvas { width: 100%; height: 100%; }
+.viewer-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 700px) { .viewer-pair { grid-template-columns: 1fr; } }
+.study-history { margin-bottom: 20px; }
+.study-history > div { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+.study-history span { color: var(--muted); }
+
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--canvas); color: var(--ink); }

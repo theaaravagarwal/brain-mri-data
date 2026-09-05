@@ -87,7 +87,7 @@ describe("new study workflow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create outline" }));
     await waitFor(() => expect(screen.getByText("Research outline ready")).toBeInTheDocument(), { timeout: 3_000 });
     expect(screen.getByText("Showing the checked facts.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Download technical receipt" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download technical receipt" })).toBeInTheDocument();
   });
 
   it("runs a one-case accuracy test when an expert outline is supplied", async () => {

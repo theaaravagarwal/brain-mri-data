@@ -246,6 +246,39 @@ def validate_study(directory: Path) -> dict[str, Any]:
     return validation
 
 
+def save_viewing_data(paths, truth, segmentation, output):
+    """Retain voxel/geometry data without free-text source headers or extensions."""
+    from scipy.ndimage import label
+
+    volumes = []
+    for name, path in zip(("t1", "t1ce", "t2", "flair"), paths):
+        source = nib.load(path)
+        clean = nib.Nifti1Image(np.asanyarray(source.dataobj), source.affine)
+        destination = output / f"{name}.nii.gz"
+        nib.save(clean, destination)
+        os.chmod(destination, 0o600)
+        volumes.append(name)
+    affine = nib.load(paths[0]).affine
+    if truth is not None:
+        destination = output / "reference.nii.gz"
+        nib.save(nib.Nifti1Image(truth.astype(np.uint8), affine), destination)
+        os.chmod(destination, 0o600)
+        volumes.append("reference")
+    components, count = label(segmentation)
+    location = None
+    if count:
+        sizes = np.bincount(components.ravel())
+        sizes[0] = 0
+        points = np.argwhere(components == sizes.argmax())
+        voxel = points[np.argmin(np.sum((points - points.mean(axis=0)) ** 2, axis=1))]
+        location = nib.affines.apply_affine(affine, voxel).tolist()
+    write_json_once(output / "viewing.json", {
+        "volumes": volumes, "outlineCenterMm": location,
+        "sha256": {name: sha256(output / f"{name}.nii.gz") for name in volumes},
+        "shape": list(segmentation.shape), "affine": affine.tolist(),
+    })
+
+
 def run_inference(args: argparse.Namespace) -> dict[str, Any]:
     import monai
     import torch
@@ -257,6 +290,15 @@ def run_inference(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError("Output directory is required unless --validate-only is used")
     if args.output.exists():
         raise FileExistsError("Refusing to overwrite an existing output directory")
+    def progress(stage):
+        value = {"stage": stage, "startedAt": datetime.now(UTC).isoformat()}
+        path = args.output.parent / "progress.json"
+        temporary = path.with_suffix(".tmp")
+        temporary.write_text(json.dumps(value))
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, path)
+
+    progress("Checking scans")
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is required for this fixed RTX 4060 research runner")
 
@@ -277,6 +319,7 @@ def run_inference(args: argparse.Namespace) -> dict[str, Any]:
     if UUID(job_id).version != 4:
         raise ValueError("job-id must be a UUIDv4")
     device = torch.device("cuda:0")
+    progress("Running the model")
     with gpu_lock():
         model = PamcSegResNet(init_filters=32, source_count=1).to(device)
         state = torch.load(checkpoint, map_location=device, weights_only=True)
@@ -303,11 +346,13 @@ def run_inference(args: argparse.Namespace) -> dict[str, Any]:
     if tuple(segmentation.shape) != tuple(reference.shape) or not set(np.unique(segmentation)).issubset({0, 1}):
         raise RuntimeError("Inference produced an invalid segmentation contract")
     args.output.mkdir(parents=True, mode=0o700)
+    progress("Preparing viewing files")
     output = args.output / "research_segmentation.nii.gz"
-    output_header = reference.header.copy()
+    output_header = nib.Nifti1Header()
     output_header.set_data_dtype(np.uint8)
     nib.save(nib.Nifti1Image(segmentation, reference.affine, output_header), output)
     os.chmod(output, 0o600)
+    save_viewing_data(paths, truth, segmentation, args.output)
     reloaded = nib.load(output)
     if tuple(reloaded.shape) != tuple(reference.shape) or not np.allclose(reloaded.affine, reference.affine, rtol=0, atol=1e-5):
         raise RuntimeError("Saved segmentation did not preserve input geometry")
@@ -358,6 +403,7 @@ def run_inference(args: argparse.Namespace) -> dict[str, Any]:
         "evaluation": result_payload["evaluation"],
         "model": result_payload["provenance"],
     }
+    progress("Writing the explanation")
     explanation = generate_result_explanation(
         result,
         ollama_host=args.ollama_host,

@@ -11,10 +11,11 @@ const checkpoint = "121422a861bbe7affaa5e161058e69eea737b2390651c3c03ea20256969e
 const reportHash = "f9aa0f56ce129059a47816826a12a074794027f9dc8b00af38d4acf921623eef";
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 let jobId;
+let accessToken;
 
 async function request(path, method = "GET", expected = 200) {
   const response = await fetch(new URL(path, base), {
-    method, headers: { Origin: base.origin }, signal: AbortSignal.timeout(60_000)
+    method, headers: { Origin: base.origin, ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) }, signal: AbortSignal.timeout(60_000)
   });
   assert.equal(response.status, expected, `${method} ${path}: ${response.status}`);
   return response;
@@ -30,6 +31,7 @@ try {
   const route = evaluation ? "demo-evaluation" : "demo";
   let job = await (await request(`/api/studies/${route}`, "POST", 201)).json();
   jobId = job.jobId;
+  accessToken = job.accessToken;
   assert.equal(job.state, "validated");
   await request(`/api/studies/${jobId}/inference`, "POST", 202);
   const deadline = Date.now() + 31 * 60_000;
@@ -47,6 +49,15 @@ try {
   assert.equal(hash(mask), receipt.segmentation.output_sha256);
   assert.deepEqual(receipt.segmentation, job.result.segmentation);
   assert.equal(receipt.segmentation.geometry_preserved, true);
+  assert.ok(job.viewing?.volumes.includes("flair"), "Viewing files missing");
+  for (const modality of job.viewing.volumes) {
+    const bytes = Buffer.from(await (await request(`/api/studies/${jobId}/viewing/${modality}`)).arrayBuffer());
+    assert.equal(hash(bytes), job.viewing.sha256[modality], `Viewing hash mismatch: ${modality}`);
+  }
+  const denied = await fetch(new URL(`/api/studies/${jobId}`, base));
+  assert.equal(denied.status, 404, "Study must require its token");
+  const bundle = Buffer.from(await (await request(`/api/studies/${jobId}/package`)).arrayBuffer());
+  assert.equal(bundle.subarray(0, 2).toString(), "PK", "Result package must be ZIP");
   assert.ok(explanation.deterministic.summary);
   if (requireLlm) assert.equal(explanation.llm.status, "validated", explanation.llm.reason);
   if (evaluation) {

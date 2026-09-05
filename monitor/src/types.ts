@@ -202,6 +202,9 @@ export type StudyExplanation = {
 };
 
 export type StudyJob = {
+  progress?: { stage: string; startedAt: string } | null;
+  accessToken?: string;
+  viewing?: { volumes: string[]; outlineCenterMm: [number, number, number] | null } | null;
   schemaVersion: "research-study-job/v1";
   jobId: string;
   state: "validated" | "running" | "succeeded" | "failed";

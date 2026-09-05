@@ -22,11 +22,13 @@ function responseCapture() {
 }
 
 async function call(service, method, url, { body, headers = {}, remoteAddress = "127.0.0.1" } = {}) {
+  const id = url.match(/\/api\/studies\/([0-9a-f-]{36})/)?.[1];
+  const token = service.testTokens?.get(id);
   const req = new PassThrough();
   Object.assign(req, {
     method,
     url,
-    headers: { host: "127.0.0.1:4173", ...headers },
+    headers: { host: "127.0.0.1:4173", ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers },
     socket: { remoteAddress }
   });
   const res = responseCapture();
@@ -34,6 +36,11 @@ async function call(service, method, url, { body, headers = {}, remoteAddress = 
   req.end(body);
   await handling;
   await res.complete;
+  if (res.status === 201) {
+    const created = JSON.parse(Buffer.concat(res.chunks).toString());
+    service.testTokens ??= new Map();
+    service.testTokens.set(created.jobId, created.accessToken);
+  }
   return { status: res.status, headers: res.headers, body: Buffer.concat(res.chunks), json: () => JSON.parse(Buffer.concat(res.chunks).toString()) };
 }
 
@@ -152,6 +159,22 @@ test("capabilities expose the exact ready checkpoint without a path", async () =
   assert.equal(value.demoAvailable, true);
   assert.equal(value.evaluationDemoAvailable, true);
   assert.equal(JSON.stringify(value).includes("/runs/"), false);
+});
+
+test("study tokens protect status, inference, files, package and deletion", async () => {
+  const { service, runtimeRoot } = await fixture();
+  const created = (await call(service, "POST", "/api/studies/demo")).json();
+  assert.equal(created.accessToken.length, 64);
+  const stored = await readFile(join(runtimeRoot, created.jobId, "job.json"), "utf8");
+  assert.equal(stored.includes(created.accessToken), false);
+  for (const [method, suffix] of [["GET", ""], ["POST", "/inference"], ["GET", "/viewing/flair"], ["GET", "/package"], ["DELETE", ""]]) {
+    const response = await call(service, method, `/api/studies/${created.jobId}${suffix}`, { headers: { authorization: "Bearer wrong" } });
+    assert.equal(response.status, 404);
+  }
+  const response = await call(service, "GET", `/api/studies/${created.jobId}`);
+  assert.equal(response.status, 200);
+  assert.equal(response.json().accessToken, undefined);
+  assert.equal(response.json().accessHash, undefined);
 });
 
 test("capabilities expose only aggregate external benchmark results", async () => {

@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { studyFetch, remember, history, forget, download } from "../study-access";
+const MriViewer = lazy(() => import("./MriViewer"));
 import type { StudyCapabilities, StudyJob } from "../types";
 
 type Modality = "t1" | "t1ce" | "t2" | "flair";
@@ -41,6 +43,27 @@ export default function StudyView() {
   const [usingDemo, setUsingDemo] = useState(false);
   const [checkingCapabilities, setCheckingCapabilities] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recent, setRecent] = useState(history);
+  const [health, setHealth] = useState<{ checkedAt: string; diskFreeBytes: number; gpu: { freeBytes: number; totalBytes: number } | null; ollama: boolean; checkpoint: string } | null>(null);
+  const [showHealth, setShowHealth] = useState(false);
+  useEffect(() => {
+    if (!showHealth) return;
+    let disposed = false;
+    const check = () => { void fetch("/api/studies/health").then(jsonResponse<typeof health>).then(value => { if (!disposed) setHealth(value); }).catch(() => { if (!disposed) setHealth(null); }); };
+    check(); const timer = window.setInterval(check, 30000);
+    return () => { disposed = true; clearInterval(timer); };
+  }, [showHealth]);
+  useEffect(() => {
+    if (job) remember(job);
+    setRecent(history());
+  }, [job]);
+  useEffect(() => {
+    const restore = history()[0];
+    if (restore) void studyFetch(`/api/studies/${restore.jobId}`).then(jsonResponse<StudyJob>).then(setJob).catch(() => { forget(restore.jobId); setRecent(history()); });
+    const sync = () => setRecent(history());
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
 
   const checkCapabilities = () => {
     const controller = new AbortController();
@@ -65,7 +88,7 @@ export default function StudyView() {
     if (!job || job.state !== "running") return;
     let cancelled = false;
     const poll = window.setInterval(() => {
-      void fetch(`/api/studies/${job.jobId}`)
+      void studyFetch(`/api/studies/${job.jobId}`)
         .then(jsonResponse<StudyJob>)
         .then(value => { if (!cancelled) setJob(value); })
         .catch(reason => { if (!cancelled) setError(String(reason)); });
@@ -117,7 +140,7 @@ export default function StudyView() {
     setBusy("run");
     setError(null);
     try {
-      const response = await fetch(`/api/studies/${job.jobId}/inference`, { method: "POST" });
+      const response = await studyFetch(`/api/studies/${job.jobId}/inference`, { method: "POST" });
       setJob(await jsonResponse<StudyJob>(response));
     } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
     finally { setBusy(null); }
@@ -128,8 +151,9 @@ export default function StudyView() {
     setError(null);
     try {
       if (job) {
-        const response = await fetch(`/api/studies/${job.jobId}`, { method: "DELETE" });
+        const response = await studyFetch(`/api/studies/${job.jobId}`, { method: "DELETE" });
         if (!response.ok) await jsonResponse(response);
+        forget(job.jobId);
       }
       setJob(null);
       setFiles(emptyFiles());
@@ -137,6 +161,18 @@ export default function StudyView() {
       setUsingDemo(false);
     } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
     finally { setBusy(null); }
+  };
+
+  const clearHistory = async () => {
+    setBusy("clear"); setError(null);
+    const failures = [];
+    for (const row of history()) {
+      const response = await studyFetch(`/api/studies/${row.jobId}`, { method: "DELETE" });
+      if (response.ok || response.status === 404) { forget(row.jobId); if (job?.jobId === row.jobId) setJob(null); }
+      else failures.push(row.jobId.slice(0, 8));
+    }
+    setRecent(history()); setBusy(null);
+    if (failures.length) setError(`Could not clear ${failures.join(", ")}. Running studies must finish first.`);
   };
 
   const llm = job?.explanation?.llm;
@@ -150,6 +186,9 @@ export default function StudyView() {
   const benchmarkHd95 = benchmark?.metrics?.hd95_mm;
 
   return <div className="view study-view" id="view-study">
+    <details onToggle={event => setShowHealth(event.currentTarget.open)}><summary>Application health</summary>{health ? <p>Checked {new Date(health.checkedAt).toLocaleTimeString()} · Server disk free: {formatBytes(health.diskFreeBytes)} · GPU free: {health.gpu ? formatBytes(health.gpu.freeBytes) : "unavailable"} · Model: {health.checkpoint} · Local explainer: {health.ollama ? "reachable" : "unavailable"} · Gateway reachable</p> : <p>Checking application health…</p>}</details>
+    {recent.length > 0 && <button disabled={busy !== null} onClick={() => { void clearHistory().catch(reason => { setError(String(reason)); setBusy(null); }); }}>Clear this browser’s studies</button>}
+    {recent.length > 0 && <details className="study-history"><summary>Recent studies in this browser ({recent.length})</summary>{recent.map(row => <div key={row.jobId}><button onClick={() => { void studyFetch(`/api/studies/${row.jobId}`).then(jsonResponse<StudyJob>).then(setJob).catch(reason => setError(String(reason))); }}>Study {row.jobId.slice(0, 8)} · {row.state}</button><span>Created {new Date(row.createdAt).toLocaleString()} · Expires {new Date(row.expiresAt).toLocaleString()}</span></div>)}</details>}
     <div className="study-intro">
       <div>
         <h1>Try the MRI outline tool</h1>
@@ -158,7 +197,7 @@ export default function StudyView() {
       <div className="model-readiness" aria-live="polite">
         <StatusMark state={!capabilities && error ? "failed" : !capabilities ? "waiting" : modelReady ? "ready" : "failed"} label={!capabilities ? "checking" : modelReady ? "ready" : "not ready"} />
         <strong>{modelReady ? "Ready to run" : error ? "Connection check failed" : "Checking the model"}</strong>
-        <span>{capabilities ? "Runs privately on this computer" : "One moment"}</span>
+        <span>{capabilities ? "Runs privately on the research server" : "One moment"}</span>
       </div>
     </div>
 
@@ -188,7 +227,7 @@ export default function StudyView() {
 
     <div className="study-workspace">
       <form className="modality-form" onSubmit={validateStudy}>
-        <div className="section-heading"><div><h2>{usingDemo ? job?.validation?.reference_mask ? "Accuracy sample" : "Sample scans" : "Choose four scan files"}</h2><p>{usingDemo ? job?.evaluationSampleScope === "external_public" ? "A labeled case from a separate public dataset is ready." : job?.validation?.reference_mask ? "A labeled development-validation case is ready." : "This checks the workflow, not accuracy." : "Files stay private and are deleted after processing."}</p></div><span className="file-total">{usingDemo ? "Ready" : allSelected ? `${formatBytes(totalBytes)} selected` : `${Object.values(files).filter(Boolean).length}/4 scans`}</span></div>
+        <div className="section-heading"><div><h2>{usingDemo ? job?.validation?.reference_mask ? "Accuracy sample" : "Sample scans" : "Choose four scan files"}</h2><p>{usingDemo ? job?.evaluationSampleScope === "external_public" ? "A labeled case from a separate public dataset is ready." : job?.validation?.reference_mask ? "A labeled development-validation case is ready." : "This checks the workflow, not accuracy." : "Scans and outlines stay on the research server for up to 24 hours. Clear them sooner from history."}</p></div><span className="file-total">{usingDemo ? "Ready" : allSelected ? `${formatBytes(totalBytes)} selected` : `${Object.values(files).filter(Boolean).length}/4 scans`}</span></div>
         {usingDemo ? <div className="demo-ready"><strong>{job?.validation?.reference_mask ? "Labeled sample loaded" : "Built-in sample loaded"}</strong><span>{job?.evaluationSampleScope === "external_public" ? "This case comes from outside the training dataset. Run it to see one-case accuracy." : job?.validation?.reference_mask ? "The model did not train on this case. Run it to see one-case accuracy." : "You can create the outline now, or clear it and use your own files."}</span></div> : <div className="modality-list">
           {modalityDetails.map(({ key, label, detail }) => <label className="modality-row" key={key}>
             <span className="modality-code">{label}</span>
@@ -224,16 +263,18 @@ export default function StudyView() {
           <div><dt>Check ID</dt><dd title={job.validation.geometry_sha256}>{shortHash(job.validation.geometry_sha256)}</dd></div>
         </dl> : <div className="ledger-empty"><strong>Nothing to check yet</strong><span>Use the sample or choose four files.</span></div>}
         {job?.state === "validated" ? <button className="primary-action primary-action--full" type="button" disabled={!modelReady || busy !== null} onClick={runInference}>{busy === "run" ? "Starting…" : job.validation?.reference_mask ? "Run accuracy test" : "Create outline"}</button> : null}
-        {job?.state === "running" ? <div className="inference-running" aria-live="polite"><span className="activity-line" /><strong>{job.validation?.reference_mask ? "Testing this case" : "Creating the outline"}</strong><span>This can take a few minutes. You can leave this page open.</span></div> : null}
+        {job?.state === "running" ? <div className="inference-running" aria-live="polite"><span className="activity-line" /><strong>{job.progress?.stage || "Starting inference"}</strong><span>{Math.max(0, Math.floor((Date.now() - Date.parse(job.progress?.startedAt || job.updatedAt)) / 1000))} seconds in this stage. You can reopen this study from history.</span></div> : null}
         {job?.state === "failed" ? <div className="ledger-failure"><strong>Processing failed</strong><span>{job.error || "The model did not produce an outline."}</span></div> : null}
       </aside>
     </div>
 
     {job?.state === "succeeded" && job.result && shownExplanation ? <section className={`study-result ${outputNeedsReview ? "study-result--empty" : ""}`} aria-labelledby="result-title">
       <div className="result-heading"><div><h2 id="result-title">{emptyOutline ? "No outline produced" : smallOutline ? "Very small outline—review carefully" : evaluation ? "Accuracy test ready" : "Research outline ready"}</h2><p role="note">{outputNeedsReview ? "This does not mean the scan is clear—expert review is required." : "For research only—not a medical result."}</p></div><StatusMark state={outputNeedsReview ? "failed" : "complete"} label={outputNeedsReview ? "review" : "complete"} /></div>
+      {job.viewing ? <Suspense fallback={<p>Loading viewer…</p>}><MriViewer id={job.jobId} viewing={job.viewing} /></Suspense> : <p>Viewing data is unavailable for this older result. Submit the scans again to inspect an overlay.</p>}
       <div className="result-grid">
         <div className="result-summary">
           {evaluation ? <div className="evaluation-block">
+            <p>Dice measures overlap with the expert outline: 1 means exact overlap. HD95 measures boundary distance in millimeters; lower is better. These describe this case only.</p>
             <div className="evaluation-label"><strong>This case only</strong><span>Compared with the expert outline you uploaded</span></div>
             <dl className="evaluation-metrics">
               <div><dt>Dice</dt><dd>{evaluation.whole_lesion_dice.toFixed(3)}</dd></div>
@@ -247,18 +288,17 @@ export default function StudyView() {
           <p className="result-limitations">{shownExplanation.limitations}</p>
           {llm?.status !== "validated" ? <div className="llm-fallback"><strong>Showing the checked facts.</strong><span>The optional plain-language rewrite was not available.</span></div> : <div className="llm-receipt"><strong>Plain-language explanation checked</strong><span>{llm.model_name} · <span title={llm.model_digest || undefined}>{shortHash(llm.model_digest)}</span></span></div>}
         </div>
-        <dl className="receipt-ledger">
+        <details><summary>Technical details</summary><dl className="receipt-ledger">
           <div><dt>Model</dt><dd>{job.result.provenance.model_id}</dd></div>
           <div><dt>Model file ID</dt><dd title={job.result.provenance.checkpoint_sha256}>{shortHash(job.result.provenance.checkpoint_sha256)}</dd></div>
           <div><dt>Outline file ID</dt><dd title={job.result.segmentation.output_sha256}>{shortHash(job.result.segmentation.output_sha256)}</dd></div>
           <div><dt>Same scan size</dt><dd>Yes · {job.result.segmentation.output_shape.join(" × ")}</dd></div>
           <div><dt>Deleted after</dt><dd>{new Date(job.expiresAt).toLocaleString()}</dd></div>
-        </dl>
+        </dl></details>
       </div>
       <div className="artifact-actions">
-        <a className="primary-action" href={`/api/studies/${job.jobId}/artifacts/segmentation`} download>Download outline</a>
-        <a className="secondary-action" href={`/api/studies/${job.jobId}/artifacts/receipt`} download>Download technical receipt</a>
-        <a className="secondary-action" href={`/api/studies/${job.jobId}/artifacts/explanation`} download>Download explanation</a>
+        <button className="primary-action" onClick={() => { void download(`/api/studies/${job.jobId}/package`, "research-result.zip").catch(reason => setError(String(reason))); }}>Download result package</button>
+        {(["segmentation", "receipt", "explanation"] as const).map(kind => <button key={kind} className="secondary-action" onClick={() => { void download(`/api/studies/${job.jobId}/artifacts/${kind}`, kind === "segmentation" ? "research_segmentation.nii.gz" : `${kind}.json`).catch(reason => setError(String(reason))); }}>{kind === "segmentation" ? "Download outline" : kind === "receipt" ? "Download technical receipt" : "Download explanation"}</button>)}
         <button className="text-action" type="button" onClick={clearStudy} disabled={busy !== null}>{busy === "clear" ? "Clearing…" : "Clear local result"}</button>
       </div>
     </section> : null}

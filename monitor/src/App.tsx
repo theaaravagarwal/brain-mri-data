@@ -354,13 +354,12 @@ export function App() {
   }, []);
 
   const evidence = useResource<ResourceEnvelope<EvidencePayload>>("/api/evidence", activeView === "evidence");
-  const reporting = snapshot ? ([snapshot.hosts.nvidia, snapshot.hosts.amd]).filter(host => host.reachable && !host.stale).length : 0;
 
   return <div className="shell">
     <a className="skip-link" href="#main-content">Skip to current view</a>
     <header className="masthead">
       <div className="product-identity"><strong>Brain MRI demo</strong></div>
-      <div className="network-summary"><strong>{snapshot ? `${reporting}/2 workers online` : "Checking workers"}</strong></div>
+      <div className="network-summary"><strong>Private research workspace</strong></div>
     </header>
     <div className="prototype-notice" role="note"><strong>For research only</strong><span>Not medical advice.</span></div>
     <nav className="view-nav" aria-label="Research workspace">

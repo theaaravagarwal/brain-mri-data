@@ -1,8 +1,9 @@
 import Busboy from "busboy";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID, randomBytes, timingSafeEqual } from "node:crypto";
+import { ZipArchive } from "archiver";
 import { spawn } from "node:child_process";
 import { createReadStream, createWriteStream } from "node:fs";
-import { access, chmod, copyFile, mkdir, open, readFile, readdir, rm, stat } from "node:fs/promises";
+import { access, chmod, copyFile, mkdir, open, readFile, readdir, rm, stat, statfs, rename } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { finished } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
@@ -41,6 +42,7 @@ function publicJob(job) {
     result: job.result ?? null,
     explanation: job.explanation ?? null,
     error: job.error ?? null,
+    viewing: job.viewing ?? null,
     artifacts: job.state === "succeeded" ? Object.keys(ARTIFACTS) : [],
     evaluationSampleScope: job.evaluationSampleScope ?? null
   };
@@ -173,6 +175,7 @@ export function createStudyService(options = {}) {
   const jobs = new Map();
   const mutationTimes = [];
   let activeJobId = null;
+  let pendingAdmissions = 0;
   let initialized = false;
   let capabilities = null;
 
@@ -239,11 +242,12 @@ export function createStudyService(options = {}) {
 
   async function persist(job) {
     const path = join(runtimeRoot, job.jobId, "job.json");
-    const handle = await open(path, "w", 0o600);
+    const handle = await open(`${path}.tmp`, "w", 0o600);
     try {
-      await handle.writeFile(JSON.stringify(publicJob(job), null, 2) + "\n");
+      await handle.writeFile(JSON.stringify({ ...publicJob(job), accessHash: job.accessHash }, null, 2) + "\n");
       await handle.sync();
     } finally { await handle.close(); }
+    await rename(`${path}.tmp`, path);
   }
 
   async function initialize() {
@@ -256,17 +260,25 @@ export function createStudyService(options = {}) {
       const directory = join(runtimeRoot, entry.name);
       try {
         const saved = JSON.parse(await readFile(join(directory, "job.json"), "utf8"));
-        if (Date.parse(saved.expiresAt) <= now || saved.state !== "succeeded") {
+        if (!Number.isFinite(Date.parse(saved.expiresAt)) || Date.parse(saved.expiresAt) <= now) {
           await rm(directory, { recursive: true, force: true });
           continue;
         }
-        jobs.set(entry.name, { ...saved, jobId: entry.name, directory });
+        const restored = { ...saved, jobId: entry.name, directory };
+        if (saved.state !== "succeeded") {
+          await rm(join(directory, "input"), { recursive: true, force: true });
+          await rm(join(directory, "artifacts"), { recursive: true, force: true });
+          restored.state = "failed";
+          restored.error = "Processing was interrupted by a restart. Submit the scans again.";
+          await persist(restored);
+        }
+        jobs.set(entry.name, restored);
       } catch { await rm(directory, { recursive: true, force: true }); }
     }
     await refreshCapabilities();
     setInterval(() => {
       for (const jobId of jobs.keys()) getJob(jobId);
-    }, 60 * 60 * 1000).unref();
+    }, 60 * 1000).unref();
     initialized = true;
   }
 
@@ -340,6 +352,7 @@ export function createStudyService(options = {}) {
     const contentType = req.headers["content-type"] || "";
     if (!contentType.startsWith("multipart/form-data;")) throw Object.assign(new Error("A multipart study upload is required"), { status: 415 });
     const jobId = randomUUID();
+    const accessToken = randomBytes(32).toString("hex");
     const directory = join(runtimeRoot, jobId);
     const inputDirectory = join(directory, "input");
     await mkdir(inputDirectory, { recursive: true, mode: 0o700 });
@@ -354,6 +367,7 @@ export function createStudyService(options = {}) {
       const now = new Date();
       const job = {
         jobId,
+        accessHash: createHash("sha256").update(accessToken).digest("hex"),
         state: "validated",
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
@@ -367,7 +381,7 @@ export function createStudyService(options = {}) {
       };
       jobs.set(jobId, job);
       await persist(job);
-      sendJson(res, 201, publicJob(job));
+      sendJson(res, 201, { ...publicJob(job), accessToken });
     } catch (error) {
       await rm(directory, { recursive: true, force: true });
       throw Object.assign(new Error(safeProcessError(error.stderr || error.message)), {
@@ -397,6 +411,7 @@ export function createStudyService(options = {}) {
       : null;
     if (evaluation && !reference) throw new Error("Accuracy sample reference outline is unavailable");
     const jobId = randomUUID();
+    const accessToken = randomBytes(32).toString("hex");
     const directory = join(runtimeRoot, jobId);
     const inputDirectory = join(directory, "input");
     await mkdir(inputDirectory, { recursive: true, mode: 0o700 });
@@ -422,13 +437,14 @@ export function createStudyService(options = {}) {
       const now = new Date();
       const job = {
         jobId, state: "validated", createdAt: now.toISOString(), updatedAt: now.toISOString(),
+        accessHash: createHash("sha256").update(accessToken).digest("hex"),
         expiresAt: new Date(now.getTime() + RETENTION_MS).toISOString(), directory, validation,
         uploadMetadata: {}, evaluationSampleScope: evaluation ? evaluationDemoScope : null,
         result: null, explanation: null, error: null
       };
       jobs.set(jobId, job);
       await persist(job);
-      sendJson(res, 201, publicJob(job));
+      sendJson(res, 201, { ...publicJob(job), accessToken });
     } catch (error) {
       await rm(directory, { recursive: true, force: true });
       throw error;
@@ -456,6 +472,8 @@ export function createStudyService(options = {}) {
       const explanation = JSON.parse(await readFile(join(outputDirectory, "explanation.json"), "utf8"));
       job.result = result;
       job.explanation = explanation;
+      try { job.viewing = JSON.parse(await readFile(join(outputDirectory, "viewing.json"), "utf8")); }
+      catch (error) { if (error.code !== "ENOENT") throw error; }
       job.state = "succeeded";
       job.error = null;
     } catch (error) {
@@ -540,9 +558,60 @@ export function createStudyService(options = {}) {
   async function handle(req, res) {
     await initialize();
     const path = new URL(req.url || "/", "http://localhost").pathname;
+    const protectedStudy = path.match(/^\/api\/studies\/([0-9a-f-]+)(?:\/|$)/);
+    if (protectedStudy) {
+      const job = getJob(protectedStudy[1]);
+      const token = String(req.headers.authorization || "").replace(/^Bearer /, "");
+      const digest = createHash("sha256").update(token).digest();
+      if (!/^[0-9a-f]{64}$/.test(job?.accessHash || "") || !timingSafeEqual(digest, Buffer.from(job.accessHash, "hex"))) {
+        return sendJson(res, 404, { error: "study_not_found" });
+      }
+    }
+    if (req.method === "POST" && ["/api/studies", "/api/studies/demo", "/api/studies/demo-evaluation"].includes(path)) {
+      const disk = await statfs(runtimeRoot);
+      if (disk.bavail * disk.bsize < Math.max(1, pendingAdmissions) * 8 * 1024 ** 3) return sendJson(res, 507, { error: "storage_full", detail: "Free at least 8 GiB on the application host before adding studies." });
+    }
+    const viewing = path.match(/^\/api\/studies\/([0-9a-f-]+)\/viewing\/(t1|t1ce|t2|flair|reference)$/);
+    if (req.method === "GET" && viewing) {
+      const job = getJob(viewing[1]);
+      if (job.state !== "succeeded" || !job.viewing?.volumes.includes(viewing[2])) return sendJson(res, 404, { error: "viewing_unavailable" });
+      const file = join(job.directory, "artifacts", `${viewing[2]}.nii.gz`);
+      const info = await stat(file);
+      res.writeHead(200, { "Content-Type": "application/gzip", "Content-Length": info.size, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
+      const stream = createReadStream(file);
+      stream.on("error", () => res.destroy());
+      stream.pipe(res);
+      return;
+    }
+    const bundle = path.match(/^\/api\/studies\/([0-9a-f-]+)\/package$/);
+    if (req.method === "GET" && bundle) {
+      const job = getJob(bundle[1]);
+      if (job.state !== "succeeded") return sendJson(res, 409, { error: "study_not_ready" });
+      const files = Object.values(ARTIFACTS).map(value => [value.file, join(job.directory, "artifacts", value.file)]);
+      files.push(["validation-report.pdf", join(benchmarkDirectory, "validation-report.pdf")]);
+      const hashes = [];
+      for (const [name, file] of files) hashes.push(`${createHash("sha256").update(await readFile(file)).digest("hex")}  ${name}`);
+      res.writeHead(200, { "Content-Type": "application/zip", "Content-Disposition": 'attachment; filename="research-result.zip"', "Cache-Control": "no-store" });
+      const archive = new ZipArchive({ zlib: { level: 1 } });
+      archive.on("error", () => res.destroy());
+      res.on("close", () => archive.abort());
+      archive.pipe(res);
+      for (const [name, file] of files) archive.file(file, { name });
+      archive.append(hashes.join("\n") + "\n", { name: "SHA256SUMS" });
+      await archive.finalize();
+      return;
+    }
     if (req.method === "GET" && path === "/api/capabilities") {
       await refreshCapabilities();
       return sendJson(res, 200, capabilities);
+    }
+    if (req.method === "GET" && path === "/api/studies/health") {
+      const disk = await statfs(runtimeRoot);
+      let gpu = null;
+      try { gpu = await runJsonProcess(python, ["-c", "import json,torch; f,t=torch.cuda.mem_get_info(); print(json.dumps({'freeBytes':f,'totalBytes':t}))"], { cwd: repoRoot, timeoutMs: 15000, spawnImpl: options.spawnImpl }); } catch { /* reported unavailable */ }
+      let ollama = false;
+      try { ollama = (await fetch(`${process.env.BRAIN_MRI_OLLAMA_HOST || "http://127.0.0.1:11434"}/api/tags`, { signal: AbortSignal.timeout(2000) })).ok; } catch { /* reported unavailable */ }
+      return sendJson(res, 200, { checkedAt: new Date().toISOString(), diskFreeBytes: disk.bavail * disk.bsize, gpu, ollama, checkpoint: capabilities.inference.status, inferenceBusy: Boolean(activeJobId) });
     }
     if (req.method === "GET" && path === "/api/external-benchmark/report") return await serveExternalReport(res);
     if (req.method === "POST" && path === "/api/studies/demo") return await loadDemo(req, res);
@@ -556,7 +625,11 @@ export function createStudyService(options = {}) {
     if (study && UUID_V4.test(study[1])) {
       if (req.method === "GET") {
         const job = getJob(study[1]);
-        return job ? sendJson(res, 200, publicJob(job)) : sendJson(res, 404, { error: "study_not_found" });
+        let progress = null;
+        if (job?.state === "running") {
+          try { progress = JSON.parse(await readFile(join(job.directory, "progress.json"), "utf8")); } catch { /* process is starting */ }
+        }
+        return job ? sendJson(res, 200, { ...publicJob(job), progress }) : sendJson(res, 404, { error: "study_not_found" });
       }
       if (req.method === "DELETE") return await clear(req, res, study[1]);
     }
@@ -565,6 +638,8 @@ export function createStudyService(options = {}) {
 
   return {
     handle: async (req, res) => {
+      const admission = req.method === "POST" && ["/api/studies", "/api/studies/demo", "/api/studies/demo-evaluation"].includes(req.url);
+      if (admission) pendingAdmissions++;
       try { await handle(req, res); }
       catch (error) {
         const status = Number(error.status) || 500;
@@ -574,6 +649,7 @@ export function createStudyService(options = {}) {
           detail: status >= 500 ? "The local study gateway could not complete the request." : String(error.message).slice(0, 280)
         });
       }
+      finally { if (admission) pendingAdmissions--; }
     },
     initialize,
     jobs,

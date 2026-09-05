@@ -15,10 +15,36 @@ from scripts.run_4060_research_inference import (
     evaluation_metrics,
     input_paths,
     validate_study,
+    save_viewing_data,
 )
 
 
 class ResearchInferenceInputTests(unittest.TestCase):
+    def test_viewing_copies_preserve_geometry_and_remove_text(self):
+        import json
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            affine = np.array([[0, -2, 0, 14], [3, 0, 0, -9], [0, 0, 4, 7], [0, 0, 0, 1]], dtype=float)
+            data = np.arange(120, dtype=np.float32).reshape(4, 5, 6)
+            paths = []
+            for index in range(4):
+                image = nib.Nifti1Image(data, affine)
+                image.header["descrip"] = b"private source text"
+                path = root / f"input{index}.nii.gz"
+                nib.save(image, path)
+                paths.append(path)
+            output = root / "output"
+            output.mkdir()
+            mask = np.zeros(data.shape, dtype=np.uint8)
+            mask[1, 2, 3] = 1
+            save_viewing_data(paths, mask, mask, output)
+            viewed = nib.load(output / "flair.nii.gz")
+            np.testing.assert_array_equal(viewed.get_fdata(), data)
+            np.testing.assert_allclose(viewed.affine, affine)
+            self.assertEqual(viewed.header["descrip"].item(), b"")
+            manifest = json.loads((output / "viewing.json").read_text())
+            np.testing.assert_allclose(manifest["outlineCenterMm"], nib.affines.apply_affine(affine, [1, 2, 3]))
+
     def write_study(
         self,
         root: Path,
