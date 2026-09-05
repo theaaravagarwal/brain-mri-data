@@ -439,10 +439,10 @@ export function createStudyService(options = {}) {
     activeJobId = job.jobId;
     job.state = "running";
     job.updatedAt = new Date().toISOString();
-    await persist(job);
     const inputDirectory = join(job.directory, "input");
     const outputDirectory = join(job.directory, "artifacts");
     try {
+      await persist(job);
       const args = [
         runner, inputDirectory, outputDirectory,
         "--job-id", job.jobId,
@@ -463,10 +463,13 @@ export function createStudyService(options = {}) {
       job.error = safeProcessError(error.stderr || error.message);
       await rm(outputDirectory, { recursive: true, force: true });
     } finally {
-      await rm(inputDirectory, { recursive: true, force: true });
-      job.updatedAt = new Date().toISOString();
-      await persist(job);
-      activeJobId = null;
+      try {
+        await rm(inputDirectory, { recursive: true, force: true });
+        job.updatedAt = new Date().toISOString();
+        await persist(job);
+      } finally {
+        activeJobId = null;
+      }
     }
   }
 
@@ -479,7 +482,9 @@ export function createStudyService(options = {}) {
     if (capabilities.inference.status !== "ready") return sendJson(res, 503, { error: "model_unavailable" });
     if (activeJobId) return sendJson(res, 409, { error: "gpu_busy", activeJobId });
     if (job.state !== "validated") return sendJson(res, 409, { error: "study_not_ready", state: job.state });
-    void runJob(job);
+    void runJob(job).catch(() => {
+      console.error("Study job could not persist its final state");
+    });
     sendJson(res, 202, publicJob({ ...job, state: "running", updatedAt: new Date().toISOString() }));
   }
 

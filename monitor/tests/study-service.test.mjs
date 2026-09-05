@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { mkdtemp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
@@ -127,6 +127,20 @@ async function fixture({ bindHost, publicHosts, deviceProbe = async () => true }
   await service.initialize();
   return { root, runtimeRoot, checkpoint, benchmarkDirectory, service };
 }
+
+test("a job persistence failure releases the GPU slot for the next study", async () => {
+  const { service, runtimeRoot } = await fixture();
+  const first = (await call(service, "POST", "/api/studies/demo")).json();
+  await rm(join(runtimeRoot, first.jobId), { recursive: true });
+  assert.equal((await call(service, "POST", `/api/studies/${first.jobId}/inference`)).status, 202);
+  // Let the failed write and final cleanup complete before starting another job.
+  await new Promise(resolve => setTimeout(resolve, 50));
+  assert.equal((await call(service, "GET", `/api/studies/${first.jobId}`)).json().state, "failed");
+  const second = (await call(service, "POST", "/api/studies/demo")).json();
+  assert.equal((await call(service, "POST", `/api/studies/${second.jobId}/inference`)).status, 202);
+  await new Promise(resolve => setTimeout(resolve, 50));
+  assert.equal((await call(service, "GET", `/api/studies/${second.jobId}`)).json().state, "succeeded");
+});
 
 test("capabilities expose the exact ready checkpoint without a path", async () => {
   const { service } = await fixture();

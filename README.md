@@ -1,5 +1,16 @@
 # Brain MRI dataset aggregator
 
+## Working research prototype
+
+Open <http://100.64.0.1:4173> from the tailnet. Choose **Use sample** or
+upload T1, T1ce, T2, and FLAIR volumes, then run and download the outline.
+The application runs on `.7`; `.1` provides the stable proxy. No training is
+needed to use it, and `.3` is excluded from current operations.
+
+See [the prototype operating guide](docs/prototype-operations.md) for acceptance
+checks, model identity, service recovery, and the definition of completion.
+The dataset and historical research workflows below remain available separately.
+
 This project creates provenance-preserving manifests for four-sequence brain MRI
 tumour datasets. It is designed for a **multi-module 3D protocol**: every
 evaluated case requires T1, T1ce/T1c, T2, and FLAIR/T2f, plus a voxel mask.

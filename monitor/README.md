@@ -1,12 +1,18 @@
 # Brain MRI research workspace
 
+For the current deployed prototype, start with the
+[operating guide](../docs/prototype-operations.md). The app is hosted on `.7`,
+proxied through `.1:4173`, and uses `qwen3:4b`. The three visible tabs are
+Try it, System status, and Model results; the resource endpoints below also
+preserve historical research evidence.
+
 A private, local workflow for validating four-volume adult-glioma MRI studies,
 running one fixed CNN, and returning a research segmentation with exact
 provenance. It binds either to loopback or the NVIDIA worker's exact Tailscale
 address; uploaded image data remains on that worker and is never supplied to
 the language model.
 
-The interface has five ordered views:
+The workspace includes these product and historical evidence surfaces:
 
 1. **New study** — select T1, T1ce, T2, and FLAIR NIfTI volumes, validate their
    geometry, run the fixed CNN, and download the segmentation, receipt, and
@@ -35,7 +41,7 @@ SHA-256 121422a861bbe7affaa5e161058e69eea737b2390651c3c03ea20256969e99e5
 SETUP_CUDA=1 ./setup.sh
 scripts/install_node_runtime.sh
 PATH="$PWD/.tools/node/bin:$PATH" npm --prefix monitor ci
-MONITOR_BIND_HOST=100.64.0.1 BRAIN_MRI_LLM_MODEL=qwen3:0.6b scripts/start_research_workspace.sh
+MONITOR_BIND_HOST=100.64.0.7 MONITOR_PUBLIC_HOSTS=100.64.0.1,100.64.0.7 BRAIN_MRI_LLM_MODEL=qwen3:4b scripts/start_research_workspace.sh
 ```
 
 The Node installer is Linux x86-64 only, downloads the pinned official archive,
@@ -54,8 +60,8 @@ fits the worker and provide its exact tag. The resolved model digest is recorded
 with each accepted explanation:
 
 ```bash
-ollama pull qwen3:0.6b
-BRAIN_MRI_LLM_MODEL=qwen3:0.6b scripts/start_research_workspace.sh
+ollama pull qwen3:4b
+BRAIN_MRI_LLM_MODEL=qwen3:4b scripts/start_research_workspace.sh
 ```
 
 Without that variable, the product still returns the deterministic validated
@@ -74,8 +80,9 @@ pass validation; otherwise the deterministic explanation remains authoritative.
 - One GPU inference may run at a time. The process has a 30-minute timeout.
 - Uploaded volumes are deleted after validation failure or inference completion.
   Result artifacts expire after 24 hours and may be cleared immediately in the UI.
-- No reference mask is supplied for new studies, so the product never reports
-  Dice, accuracy, diagnosis, prognosis, or treatment conclusions.
+- Without an optional expert reference mask the app cannot report accuracy.
+  With a matching reference it reports single-case overlap and boundary metrics.
+  Neither flow produces diagnosis, prognosis, or treatment conclusions.
 
 ## Operations network behavior
 
