@@ -250,7 +250,13 @@ export function createStudyService(options = {}) {
     await rename(`${path}.tmp`, path);
   }
 
-  async function initialize() {
+  let initialization;
+  function initialize() {
+    initialization ??= initializeOnce().catch(error => { initialization = null; throw error; });
+    return initialization;
+  }
+
+  async function initializeOnce() {
     if (initialized) return;
     await mkdir(runtimeRoot, { recursive: true, mode: 0o700 });
     await chmod(runtimeRoot, 0o700);

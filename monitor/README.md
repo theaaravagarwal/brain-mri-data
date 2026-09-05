@@ -78,8 +78,9 @@ pass validation; otherwise the deterministic explanation remains authoritative.
 - Geometry validation requires matching 3D shape and affine, finite voxels,
   axes no larger than 512, and no more than 64 million voxels per volume.
 - One GPU inference may run at a time. The process has a 30-minute timeout.
-- Uploaded volumes are deleted after validation failure or inference completion.
-  Result artifacts expire after 24 hours and may be cleared immediately in the UI.
+- Original uploaded volumes are deleted after validation failure or inference completion.
+  Sanitized viewing copies and result artifacts expire after 24 hours and may be
+  cleared immediately. Browser-specific history stores access tokens, not scan bytes.
 - Without an optional expert reference mask the app cannot report accuracy.
   With a matching reference it reports single-case overlap and boundary metrics.
   Neither flow produces diagnosis, prognosis, or treatment conclusions.

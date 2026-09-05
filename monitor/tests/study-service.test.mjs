@@ -60,13 +60,13 @@ function multipartStudy(boundary, withReference = false) {
   return Buffer.concat(parts);
 }
 
-function fakeSpawn() {
+function fakeSpawn(inferenceDelay = 0) {
   return (_command, args) => {
     const child = new EventEmitter();
     child.stdout = new PassThrough();
     child.stderr = new PassThrough();
     child.kill = () => {};
-    queueMicrotask(() => {
+    setTimeout(() => {
       const input = args[1];
       const hasReference = existsSync(join(input, "research_reference.nii")) || existsSync(join(input, "research_reference.nii.gz"));
       if (args.includes("--validate-only")) {
@@ -101,12 +101,12 @@ function fakeSpawn() {
         }));
       }
       queueMicrotask(() => child.emit("close", 0));
-    });
+    }, args.includes("--validate-only") ? 0 : inferenceDelay);
     return child;
   };
 }
 
-async function fixture({ bindHost, publicHosts, deviceProbe = async () => true } = {}) {
+async function fixture({ bindHost, publicHosts, deviceProbe = async () => true, inferenceDelay = 0 } = {}) {
   const root = await mkdtemp(join(tmpdir(), "brain-study-service-"));
   const repoRoot = join(root, "repo");
   const runtimeRoot = join(root, "runtime");
@@ -130,9 +130,10 @@ async function fixture({ bindHost, publicHosts, deviceProbe = async () => true }
   await writeFile(runner, "runner");
   await writeFile(checkpoint, "checkpoint");
   const expectedCheckpointSha256 = createHash("sha256").update("checkpoint").digest("hex");
-  const service = createStudyService({ repoRoot, runtimeRoot, python, runner, checkpoint, expectedCheckpointSha256, demoDirectory, evaluationDemoDirectory, evaluationDemoScope: "external_public", benchmarkDirectory, spawnImpl: fakeSpawn(), deviceProbe, bindHost, publicHosts });
+  const serviceOptions = { repoRoot, runtimeRoot, python, runner, checkpoint, expectedCheckpointSha256, demoDirectory, evaluationDemoDirectory, evaluationDemoScope: "external_public", benchmarkDirectory, spawnImpl: fakeSpawn(inferenceDelay), deviceProbe, bindHost, publicHosts };
+  const service = createStudyService(serviceOptions);
   await service.initialize();
-  return { root, runtimeRoot, checkpoint, benchmarkDirectory, service };
+  return { root, runtimeRoot, checkpoint, benchmarkDirectory, service, serviceOptions };
 }
 
 test("a job persistence failure releases the GPU slot for the next study", async () => {
@@ -175,6 +176,33 @@ test("study tokens protect status, inference, files, package and deletion", asyn
   assert.equal(response.status, 200);
   assert.equal(response.json().accessToken, undefined);
   assert.equal(response.json().accessHash, undefined);
+});
+
+test("simultaneous submissions keep the second study available and reject clearing an active job", async () => {
+  const { service } = await fixture({ inferenceDelay: 200 });
+  const first = (await call(service, "POST", "/api/studies/demo")).json();
+  const second = (await call(service, "POST", "/api/studies/demo")).json();
+  const started = await Promise.all([first, second].map(job => call(service, "POST", `/api/studies/${job.jobId}/inference`)));
+  assert.deepEqual(started.map(value => value.status).sort(), [202, 409]);
+  const running = started[0].status === 202 ? first : second;
+  const waiting = running === first ? second : first;
+  assert.equal((await call(service, "DELETE", `/api/studies/${running.jobId}`)).status, 409);
+  assert.equal((await call(service, "GET", `/api/studies/${waiting.jobId}`)).json().state, "validated");
+  await new Promise(resolve => setTimeout(resolve, 250));
+});
+
+test("completed studies retain access after restart and expire with their files", async () => {
+  const { service, serviceOptions, runtimeRoot } = await fixture();
+  const job = (await call(service, "POST", "/api/studies/demo")).json();
+  await call(service, "POST", `/api/studies/${job.jobId}/inference`);
+  await new Promise(resolve => setTimeout(resolve, 30));
+  const restarted = createStudyService(serviceOptions);
+  const headers = { authorization: `Bearer ${job.accessToken}` };
+  assert.equal((await call(restarted, "GET", `/api/studies/${job.jobId}`, { headers })).json().state, "succeeded");
+  restarted.jobs.get(job.jobId).expiresAt = "2000-01-01T00:00:00Z";
+  assert.equal((await call(restarted, "GET", `/api/studies/${job.jobId}`, { headers })).status, 404);
+  await new Promise(resolve => setTimeout(resolve, 30));
+  assert.equal(existsSync(join(runtimeRoot, job.jobId)), false);
 });
 
 test("capabilities expose only aggregate external benchmark results", async () => {

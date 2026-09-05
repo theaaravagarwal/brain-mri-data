@@ -17,8 +17,14 @@ storage errors and a repeatable acceptance command. It does not train a model.
    for a reference-mask comparison. These are repeat demonstrations, not new tests.
 3. Alternatively, select your own T1, T1ce, T2, and FLAIR NIfTI files. Supply an
    expert reference mask if available. Without a reference the app cannot score accuracy.
-4. Run the outline and download the segmentation, receipt, and explanation.
-5. Clear the result when finished. Artifacts otherwise expire after 24 hours.
+4. Run the outline and inspect the MRI viewer. Select a modality and plane,
+   scroll slices, adjust overlay opacity, and use Jump to outline. With a reference,
+   choose Compare side by side for linked model/reference views.
+5. Download the result ZIP or individual artifacts. Technical details contain
+   exact hashes. Recent studies are available only in the browser that created them.
+6. Clear the result when finished. Sanitized viewing copies and artifacts expire
+   after 24 hours; original uploads are removed after processing. Clearing browser
+   storage loses access tokens but does not immediately delete server files.
 
 ## Repeatable acceptance check
 
@@ -53,6 +59,12 @@ The app and proxy are user systemd services. They are enabled and user lingering
 is enabled on `.1` and `.7`, allowing startup without interactive login. No reboot
 was performed in the finishing pass; enabled state is not a completed reboot test.
 
+The viewer-release reboot attempt on `.7` was rejected with `Interactive
+authentication required`; `sudo -n` also requires a password. A machine owner
+must run `sudo systemctl reboot` interactively while inference is idle, first
+on `.7` and then on `.1` after `.7` passes acceptance. Service-restart recovery
+is tested separately and does not count as an actual reboot test.
+
 The historical System status collector still reads `.1` and `.3` telemetry.
 Its worker count is not the app readiness indicator: `.3` can be unavailable
 while inference on `.7` remains ready. Collection does not launch training.
@@ -70,6 +82,28 @@ before testing. Completed jobs are restored on startup until expiry; incomplete
 jobs are removed. Do not restart merely because the GPU is idle.
 
 ## Deploy and roll back
+
+```bash
+# Deploy a reviewed commit to an isolated release directory, build, activate,
+# and run both live acceptance checks. Failure restores the previous release.
+bash scripts/deploy_prototype.sh deploy HEAD
+bash scripts/deploy_prototype.sh rollback
+```
+
+The deployed source is under `.7:~/Documents/.aa/brain/deploy/releases/<commit>`.
+The service uses `deploy/current/monitor`; runtime studies, checkpoint, Python
+environment, and external report remain shared. Deployment refuses activation
+while inference is active. A release directory is immutable; retry a failed build
+with a new reviewed commit. The original root deployment remains a rollback target.
+
+New study endpoints require a per-study Bearer token returned only at creation.
+Tokens are kept in browser storage; only hashes are stored in job metadata.
+There is no server endpoint listing all users' studies. Pre-token jobs cannot
+be claimed by another browser and expire under their original retention policy.
+
+Viewing endpoints serve only named sanitized volumes; result packages include
+segmentation, receipt, explanation, report, and SHA256SUMS, never scan volumes.
+The LLM contract is unchanged and contains no viewing bytes or access tokens.
 
 Review `git status` before deployment: this repository contains unrelated local
 work that must not be included accidentally. Deploy only reviewed files to the

@@ -56,8 +56,9 @@ error state.
   explanation artifacts; preserve the source geometry in the output.
 - Give the optional local LLM validated result metadata only. Reject its output
   unless it preserves the evidence fields and contains no clinical claim.
-- Remove uploaded volumes after processing and expire result artifacts after
-  24 hours; allow the user to clear results sooner.
+- Remove original uploads after processing; retain sanitized viewing volumes and
+  result artifacts for 24 hours. Browser-specific study access permits reopening
+  and immediate clearing without exposing other users' history.
 - Use fixed, allowlisted SSH targets and commands; browser input never becomes
   a command, path, or host name.
 - Never send MRI data to the language model or any external service.
